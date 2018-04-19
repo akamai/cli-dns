@@ -1,5 +1,7 @@
 # Akamai CLI for Fast DNS
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/akamai/cli-dns)](https://goreportcard.com/report/github.com/akamai/cli-dns) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns?ref=badge_shield)
+
 An [Akamai CLI](https://developer.akamai.com/cli) package for managing DNS Zones using Fast DNS.
 
 ## Getting Started
@@ -120,3 +122,5 @@ If the command is run in a non-interactive terminal, **or** the `--non-interacti
 ## License
 
 This package is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for details.
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns?ref=badge_large)
