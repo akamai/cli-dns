@@ -14,6 +14,25 @@ To install this package, use Akamai CLI:
 $ akamai install dns
 ```
 
+You may also use this as a stand-alone command by downloading the
+[latest release binary](https://github.com/akamai/cli-dns/releases)
+for your system, or by cloning this repository and compiling it yourself.
+
+### Compiling from Source
+
+If you want to compile it from source, you will need Go 1.7 or later, and the [Dep](https://golang.github.io/dep/) package manager installed:
+
+1. Fetch the package:  
+  `go get github.com/akamai/cli-dns`
+2. Change to the package directory:  
+  `cd $GOPATH/src/github.com/akamai/cli-dns`
+3. Install dependencies using `dep`:  
+  `dep ensure`
+4. Compile the binary:
+  - Linux/macOS/*nix: `go build -o akamai-dns`
+  - Windows: `go build -o akamai-dns.exe`
+5. Move the binary (`akamai-dns` or `akamai-dns.exe`) in to your `PATH`
+
 ## Usage
 
 ```
