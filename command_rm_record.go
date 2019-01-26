@@ -83,6 +83,8 @@ func cmdRmRecord(c *cli.Context) error {
 				options[option] = c.Int(option)
 			case "uint":
 				options[option] = c.Uint(option)
+			case "uint16":
+				options[option] = uint16(c.Uint(option))
 			case "bool":
 				options[option] = c.Bool(option)
 			}

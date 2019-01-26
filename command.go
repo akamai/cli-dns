@@ -96,8 +96,8 @@ var (
 			"active":      {false, "bool"},
 			"flags":       {true, "string"},
 			"name":        {true, "string"},
-			"order":       {true, "uint"},
-			"preference":  {true, "uint"},
+			"order":       {true, "uint16"},
+			"preference":  {true, "uint16"},
 			"regexp":      {true, "string"},
 			"replacement": {true, "string"},
 			"service":     {true, "string"},
@@ -110,15 +110,15 @@ var (
 			"ttl":    {false, "int"},
 		},
 		"NSEC3": {
-			"active":     {false, "bool"},
-			"algorithm":  {true, "int"},
-			"flags":      {true, "int"},
-			"iterations": {true, "int"},
-			"name":       {true, "string"},
+			"active":                 {false, "bool"},
+			"algorithm":              {true, "int"},
+			"flags":                  {true, "int"},
+			"iterations":             {true, "int"},
+			"name":                   {true, "string"},
 			"next-hashed-owner-name": {true, "string"},
-			"salt":         {true, "string"},
-			"ttl":          {false, "int"},
-			"type-bitmaps": {true, "string"},
+			"salt":                   {true, "string"},
+			"ttl":                    {false, "int"},
+			"type-bitmaps":           {true, "string"},
 		},
 		"NSEC3PARAM": {
 			"active":     {false, "bool"},
@@ -175,11 +175,11 @@ var (
 		"SRV": {
 			"active":   {false, "bool"},
 			"name":     {true, "string"},
-			"port":     {true, "uint"},
+			"port":     {true, "uint16"},
 			"priority": {true, "int"},
 			"target":   {true, "string"},
 			"ttl":      {false, "int"},
-			"weight":   {true, "uint"},
+			"weight":   {true, "uint16"},
 		},
 		"SSHFP": {
 			"active":           {false, "bool"},
@@ -320,6 +320,11 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
 					}
 				case "uint":
+					flag = cli.UintFlag{
+						Name: option,
+						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
+					}
+				case "uint16":
 					flag = cli.UintFlag{
 						Name: option,
 						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
