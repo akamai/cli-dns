@@ -9,20 +9,20 @@
     "edgegrid",
     "jsonhooks-v1"
   ]
-  revision = "196fbdab2db66d0e231cc363efb63454f55fed1c"
-  version = "v0.6.2"
+  revision = "ff25fb0c0e21a2addd8e103549c110ba369e3449"
+  version = "v0.7.2"
 
 [[projects]]
   branch = "master"
   name = "github.com/akamai/cli-common-golang"
   packages = ["."]
-  revision = "0a4a1fec97d5a5dbfceb7ed6cfc8159aa7679d5c"
+  revision = "6ba3115323b6a4e79991da6dd753a0a9471bd677"
 
 [[projects]]
   name = "github.com/briandowns/spinner"
   packages = ["."]
-  revision = "48dbb65d7bd5c74ab50d53d04c949f20e3d14944"
-  version = "1.0"
+  revision = "dd69c579ff204842e8962816987f838e2c2c18d8"
+  version = "1.4"
 
 [[projects]]
   branch = "master"
@@ -33,20 +33,26 @@
 [[projects]]
   name = "github.com/fatih/color"
   packages = ["."]
-  revision = "507f6050b8568533fb3f5504de8e5205fa62a114"
-  version = "v1.6.0"
+  revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
+  version = "v1.7.0"
 
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "ace140f73450505f33e8b8418216792275ae82a7"
-  version = "v1.35.0"
+  revision = "6ed8d5f64cd79a498d1f3fab5880cc376ce41bbe"
+  version = "v1.41.0"
 
 [[projects]]
   name = "github.com/google/uuid"
   packages = ["."]
   revision = "064e2069ce9c359c118179501254f67d7d37ba24"
   version = "0.2"
+
+[[projects]]
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
+  version = "v1.0.1"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -57,32 +63,32 @@
 [[projects]]
   name = "github.com/mattn/go-isatty"
   packages = ["."]
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
+  revision = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c"
+  version = "v0.0.4"
 
 [[projects]]
   name = "github.com/mattn/go-runewidth"
   packages = ["."]
-  revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
-  version = "v0.0.2"
+  revision = "3ee7d812e62a0804a7d0a324e0249ca2db3476d3"
+  version = "v0.0.4"
 
 [[projects]]
-  branch = "master"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
-  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+  revision = "af06845cf3004701891bf4fdb884bfe4920b3727"
+  version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/olekukonko/tablewriter"
   packages = ["."]
-  revision = "d5dd8a50526aadb3d5f2c9b5233277bc2db90e88"
+  revision = "e6d60cf7ba1f42d86d54cdf5508611c4aafb3970"
+  version = "v0.0.1"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
-  version = "v1.0.5"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/urfave/cli"
@@ -94,7 +100,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
+  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
 
 [[projects]]
   branch = "master"
@@ -103,11 +109,11 @@
     "unix",
     "windows"
   ]
-  revision = "3ccc7e5779793fd54564baf60c51bf017955e0ba"
+  revision = "b90733256f2e882e81d52f9126de08df5615afd9"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "04fdd4f17d475a2b249f06d580f3b2c94c3ac0999b66ce7ef99af22f56881e05"
+  inputs-digest = "c8ff61e0d19df1ed117680ec78649690ee850be21cd94f1a4754a4bb31716b3a"
   solver-name = "gps-cdcl"
   solver-version = 1
