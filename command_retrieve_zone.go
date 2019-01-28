@@ -308,7 +308,7 @@ func renderZoneTable(zone *dns.Zone, c *cli.Context) {
 	if len(zone.Zone.Ptr) > 0 {
 		for _, record := range zone.Zone.Ptr {
 			i++
-			options := fmt.Sprintf("%s: %d", bold.Sprintf("target"), record.Target)
+			options := fmt.Sprintf("%s: %s", bold.Sprintf("target"), record.Target)
 
 			values := []string{strconv.Itoa(i), "PTR", record.Name, strconv.Itoa(record.TTL), fmt.Sprintf("%t", record.Active), options}
 			table.Append(values)
