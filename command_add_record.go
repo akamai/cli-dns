@@ -149,7 +149,7 @@ func cmdCreateRecord(c *cli.Context) error {
 		record.(*dns.NsRecord).TTL = c.Int("ttl")
 
 		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.CnameRecord).Target += "."
+			record.(*dns.NsRecord).Target += "."
 		}
 	case "NSEC3":
 		record = dns.NewNsec3Record()
