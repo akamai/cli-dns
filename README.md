@@ -1,8 +1,8 @@
-# Akamai CLI for Fast DNS
+# Akamai CLI for Edge DNS
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/akamai/cli-dns)](https://goreportcard.com/report/github.com/akamai/cli-dns) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns?ref=badge_shield)
 
-An [Akamai CLI](https://developer.akamai.com/cli) package for managing DNS Zones using Fast DNS.
+An [Akamai CLI](https://developer.akamai.com/cli) package for managing DNS Zones using Edge DNS (formerly known as Fast DNS).
 
 ## Getting Started
 
@@ -87,7 +87,7 @@ $ akamai dns retrieve-zone example.org --filter A --filter AAAA --json
 ### Update a Zone
 
 Update a zone using `akamai dns update-zone`. This command allows you to input either
-a [Fast DNS JSON payload](https://developer.akamai.com/api/luna/config-dns/resources.html#addormodifyazone), or a standard DNS zone file.
+a [Edge DNS JSON payload](https://developer.akamai.com/api/luna/config-dns/resources.html#addormodifyazone), or a standard DNS zone file.
 
 By default, this will **append** the records to the zone.
 
