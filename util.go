@@ -22,7 +22,7 @@ import (
 func setHelpTemplates() {
 	cli.AppHelpTemplate =
 		color.YellowString("Usage: \n") +
-			`{{if or (or (eq .HelpName "akamai-dns add-record") (eq .HelpName "akamai dns add-record")) (or (eq .HelpName "akamai-dns rm-record") (eq .HelpName "akamai dns rm-record"))}}` +
+			`{{if or (or (eq .HelpName "akamai-dns add-record") (eq .HelpName "akamai dns add-record")) (or (eq .HelpName "akamai-dns rm-record") (eq .HelpName "akamai dns rm-record")) (or (eq .HelpName "akamai-dns retrieve-zone") (eq .HelpName "akamai dns retrieve-zone")) (or (eq .HelpName "akamai-dns update-zone") (eq .HelpName "akamai dns update-zone")) (or (eq .HelpName "akamai-dns list-recordsets") (eq .HelpName "akamai dns list-recordsets")) (or (eq .HelpName "akamai-dns retrieve-recordset") (eq .HelpName "akamai dns retrieve-recordset")) (or (eq .HelpName "akamai-dns create-recordset") (eq .HelpName "akamai dns create-recordset")) (or (eq .HelpName "akamai-dns update-recordset") (eq .HelpName "akamai dns update-recordset")) (or (eq .HelpName "akamai-dns delete-recordset") (eq .HelpName "akamai dns delete-recordset")) (or (eq .HelpName "akamai-dns list-zoneconfig") (eq .HelpName "akamai dns list-zoneconfig")) (or (eq .HelpName "akamai-dns create-zoneconfig") (eq .HelpName "akamai dns create-zoneconfig")) (or (eq .HelpName "akamai-dns retrieve-zoneconfig") (eq .HelpName "akamai dns retrieve-zoneconfig")) (or (eq .HelpName "akamai-dns update-zoneconfig") (eq .HelpName "akamai dns update-zoneconfig"))}}` +
 			color.BlueString(`	{{if .UsageText}}{{.UsageText}}{{else}}{{.HelpName}}{{if .ArgsUsage}} {{.ArgsUsage}}{{end}}{{end}}`) +
 			`{{else}}` +
 			color.BlueString(`	{{if .UsageText}}{{.UsageText}}{{else}}{{.HelpName}}{{if .VisibleFlags}}{{range .VisibleFlags}} [--{{.Name}}]{{end}}{{end}}{{if .ArgsUsage}} {{.ArgsUsage}}{{end}}{{if .Commands}} <command> [sub-command]{{end}}{{end}}`) +
@@ -42,7 +42,7 @@ func setHelpTemplates() {
 			"\n\n{{end}}" +
 
 			"{{if .VisibleCommands}}" +
-			`{{if or (or (eq .HelpName "akamai-dns add-record") (eq .HelpName "akamai dns add-record")) (or (eq .HelpName "akamai-dns rm-record") (eq .HelpName "akamai dns rm-record"))}}` +
+			`{{if or (or (eq .HelpName "akamai-dns add-record") (eq .HelpName "akamai dns add-record")) (or (eq .HelpName "akamai-dns rm-record") (eq .HelpName "akamai dns rm-record")) (or (eq .HelpName "akamai-dns retrieve-zone") (eq .HelpName "akamai dns retrieve-zone")) (or (eq .HelpName "akamai-dns update-zone") (eq .HelpName "akamai dns update-zone")) (or (eq .HelpName "akamai-dns list-recordsets") (eq .HelpName "akamai dns list-recordsets")) (or (eq .HelpName "akamai-dns retrieve-recordset") (eq .HelpName "akamai dns retrieve-recordset")) (or (eq .HelpName "akamai-dns create-recordset") (eq .HelpName "akamai dns create-recordset")) (or (eq .HelpName "akamai-dns update-recordset") (eq .HelpName "akamai dns update-recordset")) (or (eq .HelpName "akamai-dns delete-recordset") (eq .HelpName "akamai dns delete-recordset")) (or (eq .HelpName "akamai-dns list-zoneconfig") (eq .HelpName "akamai dns list-zoneconfig")) (or (eq .HelpName "akamai-dns create-zoneconfig") (eq .HelpName "akamai dns create-zoneconfig")) (or (eq .HelpName "akamai-dns retrieve-zoneconfig") (eq .HelpName "akamai dns retrieve-zoneconfig")) (or (eq .HelpName "akamai-dns update-zoneconfig") (eq .HelpName "akamai dns update-zoneconfig"))}}` +
 			color.YellowString("Record Types:\n") +
 			`{{else}}` +
 			color.YellowString("Built-In Commands:\n") +
