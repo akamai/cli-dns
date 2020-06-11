@@ -20,17 +20,16 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
+	"sort"
 	"strings"
 
 	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
 	akamai "github.com/akamai/cli-common-golang"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
 
-func cmdCreateRecordset(c *cli.Context) error {
+func cmdUpdateRecordset(c *cli.Context) error {
 	config, err := akamai.GetEdgegridConfig(c)
 	if err != nil {
 		return err
@@ -41,14 +40,13 @@ func cmdCreateRecordset(c *cli.Context) error {
 		zonename   string
 		outputPath string
 		inputPath  string
-		// json
-		// suppress
 	)
 
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
+
 	zonename = c.Args().First()
 	if c.IsSet("file") {
 		inputPath = c.String("file")
@@ -61,6 +59,7 @@ func cmdCreateRecordset(c *cli.Context) error {
 	akamai.StartSpinner("Preparing recordset ", "")
 	// Single recordset ops use RecordBody as return Object
 	newrecord := &dnsv2.RecordBody{}
+	setchange := false
 	if c.IsSet("file") {
 		newrecordset := &dnsv2.Recordset{}
 		// Read in json file
@@ -77,40 +76,65 @@ func cmdCreateRecordset(c *cli.Context) error {
 		}
 		newrecord.Name = newrecordset.Name
 		newrecord.RecordType = newrecordset.Type
-		newrecord.TTL = newrecordset.TTL
-		newrecord.Target = newrecordset.Rdata
-	} else if c.IsSet("type") {
-		if !c.IsSet("name") || !c.IsSet("ttl") || !c.IsSet("rdata") {
-			akamai.StopSpinnerFail()
-			cli.ShowCommandHelp(c, c.Command.Name)
-			return cli.NewExitError(color.RedString("Field flags missing for recordset creation"), 1)
+		if newrecord.TTL != newrecordset.TTL {
+			setchange = true
 		}
+		newrecord.TTL = newrecordset.TTL
+		sort.Strings(newrecord.Target)
+		sort.Strings(newrecordset.Rdata)
+		if !setchange && strings.Join(newrecord.Target, " ") != strings.Join(newrecordset.Rdata, " ") {
+			setchange = true
+		}
+		newrecord.Target = newrecordset.Rdata
+	} else if c.IsSet("type") && c.IsSet("name") {
 		newrecord.RecordType = strings.ToUpper(c.String("type"))
 		newrecord.Name = c.String("name")
-		newrecord.TTL = c.Int("ttl")
-		newrecord.Target = c.StringSlice("rdata")
+		if c.IsSet("ttl") {
+			newrecord.TTL = c.Int("ttl")
+			setchange = true
+		}
+		if c.IsSet("rdata") {
+			newrecord.Target = c.StringSlice("rdata")
+			setchange = true
+		}
 	} else {
 		akamai.StopSpinnerFail()
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset field values or input file are required"), 1)
 	}
+	akamai.StopSpinnerOk()
+
 	// See if already exists
 	record, err := dnsv2.GetRecord(zonename, newrecord.Name, newrecord.RecordType) // returns RecordBody!
-	if err == nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString("Recordset already exists"), 1)
-	} else {
-		if !dnsv2.IsConfigDNSError(err) || !err.(dnsv2.ConfigDNSError).NotFound() {
+	if err != nil {
+		if dnsv2.IsConfigDNSError(err) && err.(dnsv2.ConfigDNSError).NotFound() {
 			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure while checking recordset existance. Error: %s", err.Error())), 1)
+			return cli.NewExitError(color.RedString("Existing recordset not found."), 1)
+		} else {
+			akamai.StopSpinnerFail()
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure retrieving recordset. Error: %s", err.Error())), 1)
 		}
 	}
-	akamai.StopSpinnerOk()
-	akamai.StartSpinner("Creating Recordset  ", "")
-	err = newrecord.Save(zonename, true)
+	// Overlay changed fields
+	if !c.IsSet("file") {
+		if !c.IsSet("ttl") {
+			newrecord.TTL = record.TTL
+		}
+		if !c.IsSet("rdata") {
+			newrecord.Target = record.Target
+		}
+	}
+
+	if !setchange {
+		fmt.Fprintln(c.App.Writer, "No recordset change detected")
+		return nil
+	}
+
+	akamai.StartSpinner("Updating Recordset  ", "")
+	err = newrecord.Update(zonename, true)
 	if err != nil {
 		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset create failed. Error: %s", err.Error())), 1)
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset update failed. Error: %s", err.Error())), 1)
 	}
 	akamai.StopSpinnerOk()
 	akamai.StartSpinner("Verifying Recordset  ", "")
@@ -167,40 +191,4 @@ func cmdCreateRecordset(c *cli.Context) error {
 	}
 
 	return nil
-}
-
-func renderRecordsetTable(zone string, set *dnsv2.RecordBody, c *cli.Context) string {
-
-	outString := ""
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
-	table.SetHeader([]string{"NAME", "TYPE", "TTL", "RDATA"})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
-	table.SetCaption(true, fmt.Sprintf("Zone: %s", zone))
-
-	if set == nil {
-		return outString
-	} else {
-		name := set.Name
-		rstype := set.RecordType
-		ttl := strconv.Itoa(set.TTL)
-		for i, targ := range set.Target {
-			if i == 0 {
-				table.Append([]string{name, rstype, ttl, targ})
-			} else {
-				table.Append([]string{" ", " ", " ", targ})
-			}
-		}
-	}
-	table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
 }

@@ -3,6 +3,8 @@ github.com/akamai/AkamaiOPEN-edgegrid-golang v0.7.2 h1:E0QJD4EVNj1RMI9g0u+660IVE
 github.com/akamai/AkamaiOPEN-edgegrid-golang v0.7.2/go.mod h1:eXWHAoXwqXM7CFZpE8zdz9OVRk4G8BCR1mDwYvIyFsA=
 github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.16 h1:vZX3kf/vCWSknAUKKPHLsnUgZly2gBPz2Lj95sG1KSY=
 github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.16/go.mod h1:L+HB2uBoDgi3+r1pJEJcbGwyyHhd2QXaGsKLbDwtm8Q=
+github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.18-0.20200610205113-1b29df133381 h1:Owhn9Xroo8jWqMnxRjUvafCB81apRJrdeHMCV9hU5B8=
+github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.18-0.20200610205113-1b29df133381/go.mod h1:L+HB2uBoDgi3+r1pJEJcbGwyyHhd2QXaGsKLbDwtm8Q=
 github.com/akamai/cli-common-golang v0.0.0-20181203134352-6ba3115323b6 h1:t/ghGFQq1zsmNmXjojc+DTd8bxI7vWmSOmoEH+MHK4U=
 github.com/akamai/cli-common-golang v0.0.0-20181203134352-6ba3115323b6/go.mod h1:zCub6Q5dfWVvCjXQubVbepcb4DT2AIEPKSxWaTsydRU=
 github.com/akamai/cli-common-golang v0.0.0-20200508194158-7dad60634830 h1:zj+/CjJDuKnCKSmFH2cmYoEHprvkTihBN9klDB4jOKc=

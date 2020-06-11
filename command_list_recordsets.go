@@ -17,10 +17,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"path/filepath"
-	"os"
 
 	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
 	akamai "github.com/akamai/cli-common-golang"
@@ -30,7 +30,7 @@ import (
 )
 
 type RecordsetList struct {
-	Recordsets	[]dnsv2.Recordset
+	Recordsets []dnsv2.Recordset
 }
 
 func cmdListRecordsets(c *cli.Context) error {
@@ -41,11 +41,11 @@ func cmdListRecordsets(c *cli.Context) error {
 	dnsv2.Init(config)
 
 	var (
-		zonename string
+		zonename   string
 		outputPath string
-		rstype []string
-		search string
-		sortby string = "type"
+		rstype     []string
+		search     string
+		sortby     string = "type"
 	)
 
 	if c.NArg() == 0 {
@@ -54,12 +54,12 @@ func cmdListRecordsets(c *cli.Context) error {
 	}
 
 	zonename = c.Args().First()
-        queryArgs := dnsv2.RecordsetQueryArgs{}
-        queryArgs.ShowAll = true
+	queryArgs := dnsv2.RecordsetQueryArgs{}
+	queryArgs.ShowAll = true
 
 	// for testing
-        //queryArgs.ShowAll = false
-        //queryArgs.PageSize = 5
+	//queryArgs.ShowAll = false
+	//queryArgs.PageSize = 5
 
 	if c.IsSet("sortby") {
 		sortby = c.String("sortby")
@@ -69,19 +69,19 @@ func cmdListRecordsets(c *cli.Context) error {
 		outputPath = c.String("output")
 		outputPath = filepath.FromSlash(outputPath)
 	}
-        if c.IsSet("type") {
-                rstype = c.StringSlice("type")
-                for i, zt := range rstype {
-                        queryArgs.Types += zt
-                        if i < len(rstype)-1 {
-                                queryArgs.Types += ","
-                        }
-                }
-        }
-        if c.IsSet("search") {
-                search = c.String("search")
+	if c.IsSet("type") {
+		rstype = c.StringSlice("type")
+		for i, zt := range rstype {
+			queryArgs.Types += zt
+			if i < len(rstype)-1 {
+				queryArgs.Types += ","
+			}
+		}
+	}
+	if c.IsSet("search") {
+		search = c.String("search")
 		queryArgs.Search = search
-        }
+	}
 	akamai.StartSpinner("Retrieving Recordsets List ", "")
 	recordsetResp, err := dnsv2.GetRecordsets(zonename, queryArgs)
 	if err != nil {
@@ -89,9 +89,9 @@ func cmdListRecordsets(c *cli.Context) error {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
 	}
 	akamai.StopSpinnerOk()
-	recordsets := recordsetResp.Recordsets			// list of response objects
+	recordsets := recordsetResp.Recordsets // list of response objects
 	results := ""
-        akamai.StartSpinner("Assembling Recordsets List ", "")
+	akamai.StartSpinner("Assembling Recordsets List ", "")
 	// full output
 	if c.IsSet("json") && c.Bool("json") {
 		recordsetList := &RecordsetList{Recordsets: recordsets}
@@ -102,16 +102,16 @@ func cmdListRecordsets(c *cli.Context) error {
 		}
 		results = string(rjson)
 	} else {
-                results = renderRecordsetListTable(zonename, recordsets, c)
+		results = renderRecordsetListTable(zonename, recordsets, c)
 	}
 	akamai.StopSpinnerOk()
 	if len(outputPath) > 1 {
 		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
-                rlfHandle, err := os.Create(outputPath)		
-                if err != nil {
-                        akamai.StopSpinnerFail()
-                        return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
-                }
+		rlfHandle, err := os.Create(outputPath)
+		if err != nil {
+			akamai.StopSpinnerFail()
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+		}
 		defer rlfHandle.Close()
 		_, err = rlfHandle.WriteString(string(results))
 		if err != nil {
@@ -129,24 +129,23 @@ func cmdListRecordsets(c *cli.Context) error {
 	return nil
 }
 
-func renderRecordsetListTable(zone string, recordsets []dnsv2.Recordset, c *cli.Context) string { 
+func renderRecordsetListTable(zone string, recordsets []dnsv2.Recordset, c *cli.Context) string {
 
-	//bold := color.New(color.FgWhite, color.Bold)
 	outString := ""
 	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Recordset List")
+	outString += fmt.Sprintln("Zone Recordsets")
 	outString += fmt.Sprintln(" ")
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
-	table.SetHeader([]string{"NAME", "TYPE", "TTL", "TARGET"})
+	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_LEFT})
+	table.SetHeader([]string{"NAME", "TYPE", "TTL", "RDATA"})
 	table.SetReflowDuringAutoWrap(false)
 	table.SetAutoWrapText(false)
 	table.SetRowLine(true)
-        table.SetCenterSeparator(" ")
-        table.SetColumnSeparator(" ")
-        table.SetRowSeparator(" ")
-        table.SetBorder(false)
+	table.SetCenterSeparator(" ")
+	table.SetColumnSeparator(" ")
+	table.SetRowSeparator(" ")
+	table.SetBorder(false)
 	table.SetCaption(true, fmt.Sprintf("Zone: %s", zone))
 
 	if len(recordsets) == 0 {
@@ -162,10 +161,9 @@ func renderRecordsetListTable(zone string, recordsets []dnsv2.Recordset, c *cli.
 				if i == 0 {
 					table.Append([]string{name, rstype, ttl, targ})
 				} else {
-                                        table.Append([]string{" ", " ", " ", targ})
+					table.Append([]string{" ", " ", " ", targ})
 				}
 			}
-			table.Append([]string{" ", " ", " ", " "})
 		}
 	}
 	table.Render()
@@ -173,4 +171,3 @@ func renderRecordsetListTable(zone string, recordsets []dnsv2.Recordset, c *cli.
 
 	return outString
 }
-

@@ -24,7 +24,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-	// V1 Records
+// V1 Records
 var (
 	baseCmdFlags = []cli.Flag{}
 
@@ -349,179 +349,183 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		rmRecordCmd.Subcommands = append(rmRecordCmd.Subcommands, rmCmd)
 	}
 
-        commands = append(commands, addRecordCmd)
-        commands = append(commands, rmRecordCmd)
+	commands = append(commands, addRecordCmd)
+	commands = append(commands, rmRecordCmd)
 
 	// V2 Base flags
 	var baseV2CmdFlags = []cli.Flag{
-                        cli.BoolFlag{
-                                Name:  "json",
-                                Usage: "Output as JSON",
-                                EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
-                        },
-			cli.BoolFlag{
-				Name: "suppress",
-				Usage: "Suppress command result output. Overrides other output related flags",
-				EnvVar: "AKAMAI_CLI_DNS_" + "SUPPRESS",
-			},
-                        cli.StringFlag{
-                                Name:  "output",
-                                Usage: "Output command results to `FILE`",
-                        },
+		cli.BoolFlag{
+			Name:   "json",
+			Usage:  "Output as JSON",
+			EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
+		},
+		cli.BoolFlag{
+			Name:   "suppress",
+			Usage:  "Suppress command result output. Overrides other output related flags",
+			EnvVar: "AKAMAI_CLI_DNS_" + "SUPPRESS",
+		},
+		cli.StringFlag{
+			Name:  "output",
+			Usage: "Output command results to `FILE`",
+		},
 	}
- 
+
 	baseSetCmdFlags := append(baseV2CmdFlags, []cli.Flag{
-                        cli.StringFlag{
-                                Name:  "name",
-                                Usage: "Recordset `NAME`",
-                        },
-                        cli.StringFlag{
-                                Name:  "type",
-                                Usage: "Recordset `TYPE`",
-                        },
-        }...)
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "Recordset `NAME`",
+		},
+		cli.StringFlag{
+			Name:  "type",
+			Usage: "Recordset `TYPE`",
+		},
+	}...)
 
 	// V2 Recordsets
-        commands = append(commands, cli.Command{
-                Name:        "list-recordsets",
-                Description: "Retreive list of zone Recordsets",
-                ArgsUsage:   "<zonename>",
-                Action:      cmdListRecordsets,
-                Flags:       append(baseV2CmdFlags, []cli.Flag{
-                        cli.StringSliceFlag{ 
-                                Name:  "type", 
-                                Usage: "List recordset(s) matching `TYPE`. Multiple flags allowed", 
-                        }, 
-                        cli.StringFlag{
-                                Name:  "sortby",
-                                Usage: "List returned recordsets sorted by `SORTBY`",
-                        },
-                        cli.StringFlag{
-                                Name:  "search",
-                                Usage: "Filter returned recordsets by `SEARCH` criteria",
-                        },
-
-        	}...), 
-                BashComplete: akamai.DefaultAutoComplete,
-        })
-
-        commands = append(commands, cli.Command{
-                Name:        "create-recordsets",
-                Description: "Create multiple zone Recordsets from `FILE`",
-                ArgsUsage:   "<zonename>",
-                Action:      cmdCreateRecordsets,
-                Flags:       append(baseV2CmdFlags, []cli.Flag{
-                        cli.StringFlag{
-                                Name: "file",
-                                Usage: "`FILE` path to JSON formatted recordset content",
-                        },
-                }...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
-
-        commands = append(commands, cli.Command{
-                Name:        "update-recordsets",
-                Description: "Update multiple zone Recordsets from `FILE`",
-                ArgsUsage:   "<zonename>",
-                Action:      cmdUpdateRecordsets,
-                Flags:       append(baseV2CmdFlags, []cli.Flag{
-                        cli.StringFlag{
-                                Name: "file",
-                                Usage: "`FILE` path to JSON formatted recordset content",
-                        },
-                }...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
-
-        commands = append(commands, cli.Command{
-                Name:         "retrieve-recordset",
-                Description:  "Retrieve recordset",
-                ArgsUsage:    "<zonename>",
-                Action:       cmdRetrieveRecordset,
-                Flags: 	      baseSetCmdFlags,
-                BashComplete: akamai.DefaultAutoComplete,
-        })
-
-        commands = append(commands, cli.Command{
-                Name:        "create-recordset",
-                Description: "Create a new recordset",
-                ArgsUsage:   "<zonename>",
-                Action:      cmdCreateRecordset,
-                Flags:       append(baseSetCmdFlags, []cli.Flag{
-                        cli.IntFlag{
-                                Name:  "ttl",
-                                Usage: "Recordset `TTL`",
-                        },
-                        cli.StringSliceFlag{
-                                Name:  "target",
-                                Usage: "Recordset `TARGET`. Multiple flags allowed.",
-                        },
+	commands = append(commands, cli.Command{
+		Name:        "list-recordsets",
+		Description: "Retreive list of zone Recordsets",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdListRecordsets,
+		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.StringSliceFlag{
+				Name:  "type",
+				Usage: "List recordset(s) matching `TYPE`. Multiple flags allowed",
+			},
 			cli.StringFlag{
-				Name: "file",
+				Name:  "sortby",
+				Usage: "List returned recordsets sorted by `SORTBY`",
+			},
+			cli.StringFlag{
+				Name:  "search",
+				Usage: "Filter returned recordsets by `SEARCH` criteria",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "create-recordsets",
+		Description: "Create multiple zone Recordsets from `FILE`",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdCreateRecordsets,
+		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "file",
 				Usage: "`FILE` path to JSON formatted recordset content",
 			},
-                }...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
 
-        commands = append(commands, cli.Command{
-                Name:        "update-recordset",
-                Description: "Update existing recordset",
-                ArgsUsage:   "<zonename>",  
-                Action:      cmdUpdateRecordset,
-                Flags: append(baseSetCmdFlags, []cli.Flag{
-                        cli.BoolFlag{
-                                Name:  "overwrite",
-                                Usage: "Replace entire recordset",
-                        },
-                        cli.IntFlag{
-                                Name:  "ttl",
-                                Usage: "Recordset `TTL`",
-                        },
-                        cli.StringSliceFlag{
-                                Name:  "target",
-                                Usage: "Record `TARGET`. Multiple flags allowed.",
-                        },
-                        cli.StringFlag{
-                                Name: "file",
-                                Usage: "`FILE` path to JSON formatted recordset content. Allows multiple recordsets.",
-                        },   
-                }...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
+	commands = append(commands, cli.Command{
+		Name:        "update-recordsets",
+		Description: "Update multiple zone Recordsets from `FILE`",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdUpdateRecordsets,
+		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "file",
+				Usage: "`FILE` path to JSON formatted recordset content",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
 
-        commands = append(commands, cli.Command{
-                Name:        "delete-recordset",
-                Description: "Delete recordset",
-                ArgsUsage:   "<zonename>", 
-                Action:      cmdDeleteRecordset,
-                Flags:       baseSetCmdFlags,
-                BashComplete: akamai.DefaultAutoComplete,
-        })
+	commands = append(commands, cli.Command{
+		Name:         "retrieve-recordset",
+		Description:  "Retrieve recordset",
+		ArgsUsage:    "<zonename>",
+		Action:       cmdRetrieveRecordset,
+		Flags:        baseSetCmdFlags,
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "create-recordset",
+		Description: "Create a new recordset",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdCreateRecordset,
+		Flags: append(baseSetCmdFlags, []cli.Flag{
+			cli.IntFlag{
+				Name:  "ttl",
+				Usage: "Recordset `TTL`",
+			},
+			cli.StringSliceFlag{
+				Name:  "rdata",
+				Usage: "Recordset `RDATA`. Multiple flags allowed.",
+			},
+			cli.StringFlag{
+				Name:  "file",
+				Usage: "`FILE` path to JSON formatted recordset content",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "update-recordset",
+		Description: "Update existing recordset",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdUpdateRecordset,
+		Flags: append(baseSetCmdFlags, []cli.Flag{
+			cli.IntFlag{
+				Name:  "ttl",
+				Usage: "Recordset `TTL`",
+			},
+			cli.StringSliceFlag{
+				Name:  "rdata",
+				Usage: "Record `RDATA`. Multiple flags allowed.",
+			},
+			cli.StringFlag{
+				Name:  "file",
+				Usage: "`FILE` path to JSON formatted recordset content. Allows multiple recordsets.",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "delete-recordset",
+		Description: "Delete recordset",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdDeleteRecordset,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "Recordset `NAME`",
+			},
+			cli.StringFlag{
+				Name:  "type",
+				Usage: "Recordset `TYPE`",
+			},
+		},
+		BashComplete: akamai.DefaultAutoComplete,
+	})
 
 	// V1 Zone
-        commands = append(commands, cli.Command{
-                Name:        "retrieve-zone",
-                Description: "Fetch and display a zone",
-                ArgsUsage:   "<hostname>",
-                Action:      cmdRetrieveZone,
-                Flags: append(baseCmdFlags, []cli.Flag{
-                        cli.BoolFlag{
-                                Name:  "json",
-                                Usage: "Output as JSON",
-                                EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
-                        },
-                        cli.BoolFlag{
-                                Name:  "output",
-                                Usage: "Output to `FILE`",
-                        },
-                        cli.StringSliceFlag{
-                                Name:  "filter",
-                                Usage: "Only show record types matching `TYPE`",
-                        },
-                }...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
+	commands = append(commands, cli.Command{
+		Name:        "retrieve-zone",
+		Description: "Fetch and display a zone",
+		ArgsUsage:   "<hostname>",
+		Action:      cmdRetrieveZone,
+		Flags: append(baseCmdFlags, []cli.Flag{
+			cli.BoolFlag{
+				Name:   "json",
+				Usage:  "Output as JSON",
+				EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
+			},
+			cli.BoolFlag{
+				Name:  "output",
+				Usage: "Output to `FILE`",
+			},
+			cli.StringSliceFlag{
+				Name:  "filter",
+				Usage: "Only show record types matching `TYPE`",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
 
 	commands = append(commands, cli.Command{
 		Name:        "update-zone",
@@ -530,9 +534,9 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Action:      cmdUpdateZone,
 		Flags: append(baseCmdFlags, []cli.Flag{
 			cli.BoolTFlag{
-				Name:  "json",
-				Usage: "Input is in JSON format",
-                                EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
+				Name:   "json",
+				Usage:  "Input is in JSON format",
+				EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
 			},
 			cli.BoolFlag{
 				Name:  "dns",
@@ -551,124 +555,123 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 	})
 
 	// V2 Zones
-        baseZoneCmdFlags := append(baseV2CmdFlags, []cli.Flag{
-                        cli.StringFlag{
-                                Name:  "type",
-                                Usage: "Zone `TYPE`",
-			},
-                       	cli.StringSliceFlag{
-                                Name:  "master",
-                                Usage: "Secondary Zone `MASTER`. Multiple flags may be specified",
-			},
-                        cli.StringFlag{
-                                Name:  "comment",
-                                Usage: "Zone `COMMENT`",
-                        },
-                        cli.BoolFlag{
-                                Name:  "signandserve",
-                                Usage: "Primary or Secondary Zone signandserve flag",
-                        },
-                        cli.StringFlag{
-                                Name:  "algorithm",
-                                Usage: "Zone signandserve `ALGORITHM`",
-                        },
-                        cli.StringFlag{
-                                Name:  "tsigname",
-                                Usage: "TSIG key `NAME`",
-                        },
-                        cli.StringFlag{
-                                Name:  "tsigalgorithm",
-                                Usage: "TSIG key `ALGORITHM`",
-                        },
-                        cli.StringFlag{
-                                Name:  "tsigsecrect",
-                                Usage: "TSIG key `SECRET`",
-                        },
-                        cli.StringFlag{
-                                Name:  "target",
-                                Usage: "Alias Zone `TARGET`",
-                        },
-                        cli.StringFlag{
-                                Name:  "endcustomerid",
-                                Usage: "`END CUSTOMER ID`",
-                        },
-                        cli.StringFlag{
-                                Name:  "file",
-                                Usage: "Read JSON formatted input from `FILE`",
-                        },
+	baseZoneCmdFlags := append(baseV2CmdFlags, []cli.Flag{
+		cli.StringFlag{
+			Name:  "type",
+			Usage: "Zone `TYPE`",
+		},
+		cli.StringSliceFlag{
+			Name:  "master",
+			Usage: "Secondary Zone `MASTER`. Multiple flags may be specified",
+		},
+		cli.StringFlag{
+			Name:  "comment",
+			Usage: "Zone `COMMENT`",
+		},
+		cli.BoolFlag{
+			Name:  "signandserve",
+			Usage: "Primary or Secondary Zone `SIGNANDSERVE` flag",
+		},
+		cli.StringFlag{
+			Name:  "algorithm",
+			Usage: "Zone signandserve `ALGORITHM`",
+		},
+		cli.StringFlag{
+			Name:  "tsigname",
+			Usage: "TSIG key `NAME`",
+		},
+		cli.StringFlag{
+			Name:  "tsigalgorithm",
+			Usage: "TSIG key `ALGORITHM`",
+		},
+		cli.StringFlag{
+			Name:  "tsigsecret",
+			Usage: "TSIG key `SECRET`",
+		},
+		cli.StringFlag{
+			Name:  "target",
+			Usage: "Alias Zone `TARGET`",
+		},
+		cli.StringFlag{
+			Name:  "endcustomerid",
+			Usage: "`ENDCUSTOMERID`",
+		},
+		cli.StringFlag{
+			Name:  "file",
+			Usage: "Read JSON formatted input from `FILE`",
+		},
 	}...)
 
-        commands = append(commands, cli.Command{
-                Name:        "list-zoneconfig",
-                Description: "List zone configuration(s)",
-                Action:      cmdListZoneconfig,
-                Flags: append(baseV2CmdFlags, []cli.Flag{
-                        cli.StringSliceFlag{
-                                Name:  "contractid",
-                                Usage: "Contract `ID`. Multiple flags allowed",
-                        },      
-                        cli.StringSliceFlag{
-                                Name:  "type",
-                                Usage: "Zone `TYPE`. Multiple flags allowed",
-                        },      
-                        cli.StringFlag{
-                                Name:  "search",
-                                Usage: "Zone search `VALUE`",
-                        },
-                        cli.BoolFlag{
-                                Name:  "summary",
-                                Usage: "List zone names and type",
-                        },
-                }...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
-
-        commands = append(commands, cli.Command{
-                Name:        "create-zoneconfig",
-                ArgsUsage:   "<zonename>",
-                Description: "Create zone from configuration",
-                Action:      cmdCreateZoneconfig,
-                Flags: append(baseZoneCmdFlags, []cli.Flag{
-                        cli.StringFlag{
-                                Name:  "contractid",
-                                Usage: "Contract `ID`",
-				//Required: true,
-                        },
-                        cli.StringFlag{
-                                Name:  "groupid",
-                                Usage: "Group `ID`",
-                        },
-                        cli.BoolFlag{
-                                Name:  "initialize",
-                                Usage: "Generate default SOA and NS Records",
-                        },
-                }...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
-
-        commands = append(commands, cli.Command{
-                Name:        "retrieve-zoneconfig",
-                Description: "Fetch and display zone configuration",
-                ArgsUsage:   "<zonename>",
-                Action:      cmdRetrieveZoneconfig,
-                Flags:       baseV2CmdFlags,
-                BashComplete: akamai.DefaultAutoComplete,
-        })
-
-        commands = append(commands, cli.Command{
-                Name:        "update-zoneconfig",
-                Description: "Update a zone",
-                ArgsUsage:   "<zonename>",
-                Action:      cmdUpdateZoneconfig,
-                Flags:       append(baseZoneCmdFlags, []cli.Flag{
-                        cli.StringFlag{
-                                Name:  "contractid",
-                                Usage: "Contract `ID`",
-                                //Required: true,
-                        },
+	commands = append(commands, cli.Command{
+		Name:        "list-zoneconfig",
+		Description: "List zone configuration(s)",
+		Action:      cmdListZoneconfig,
+		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.StringSliceFlag{
+				Name:  "contractid",
+				Usage: "Contract `ID`. Multiple flags allowed",
+			},
+			cli.StringSliceFlag{
+				Name:  "type",
+				Usage: "Zone `TYPE`. Multiple flags allowed",
+			},
+			cli.StringFlag{
+				Name:  "search",
+				Usage: "Zone search `VALUE`",
+			},
+			cli.BoolFlag{
+				Name:  "summary",
+				Usage: "List zone names and type",
+			},
 		}...),
-                BashComplete: akamai.DefaultAutoComplete,
-        })
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "create-zoneconfig",
+		ArgsUsage:   "<zonename>",
+		Description: "Create zone from configuration",
+		Action:      cmdCreateZoneconfig,
+		Flags: append(baseZoneCmdFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "contractid",
+				Usage: "Contract `ID`",
+			},
+			cli.StringFlag{
+				Name:  "groupid",
+				Usage: "Group `ID`",
+			},
+			cli.BoolFlag{
+				Name:  "initialize",
+				Usage: "Generate default SOA and NS Records",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:         "retrieve-zoneconfig",
+		Description:  "Fetch and display zone configuration",
+		ArgsUsage:    "<zonename>",
+		Action:       cmdRetrieveZoneconfig,
+		Flags:        baseV2CmdFlags,
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "update-zoneconfig",
+		Description: "Update a zone",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdUpdateZoneconfig,
+		Flags: append(baseZoneCmdFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "contractid",
+				Usage: "Contract `ID`",
+				//Required: true,
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
 
 	commands = append(commands,
 		cli.Command{
