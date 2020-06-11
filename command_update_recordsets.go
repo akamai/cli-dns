@@ -74,33 +74,44 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("Failed to parse json file content"), 1)
 	}
 	// NOTE: UPDATE REPLACES ALL RECORDSETS
-	akamai.StartSpinner("Retrieving Existing Recordsets ", "")
-	queryArgs := dnsv2.RecordsetQueryArgs{}
-	queryArgs.ShowAll = true
-	recordsetResp, err := dnsv2.GetRecordsets(zonename, queryArgs)
-	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
-	}
-	akamai.StopSpinnerOk()
-	akamai.StartSpinner("Processing Updated Recordsets ", "")
-	recordsetWorkList := recordsetResp.Recordsets
-	for _, crs := range recordsets.Recordsets {
-		// for each updated recordset
-		for i, rs := range recordsetWorkList {
-			// walk the full list and relace
-			if crs.Name == rs.Name && crs.Type == rs.Type {
-				recordsetWorkList[i] = crs
-			} else if rs.Type == "SOA" {
-				// Serial needs to be incremented
-				soavals := strings.Split(rs.Rdata[0], " ")
-				v, _ := strconv.Atoi(soavals[2])
-				soavals[2] = strconv.Itoa(v + 1)
-				rs.Rdata[0] = strings.Join(soavals, " ")
+	var recordsetWorkList []dnsv2.Recordset
+	if c.IsSet("overwrite") && c.Bool("overwrite") {
+		recordsets := &dnsv2.Recordsets{}
+		err = json.Unmarshal(data, recordsets)
+		if err != nil {
+			akamai.StopSpinnerFail()
+			return cli.NewExitError(color.RedString("Failed to parse json file content"), 1)
+		}
+		recordsetWorkList = recordsets.Recordsets
+	} else {
+		akamai.StartSpinner("Retrieving Existing Recordsets ", "")
+		queryArgs := dnsv2.RecordsetQueryArgs{}
+		queryArgs.ShowAll = true
+		recordsetResp, err := dnsv2.GetRecordsets(zonename, queryArgs)
+		if err != nil {
+			akamai.StopSpinnerFail()
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
+		}
+		akamai.StopSpinnerOk()
+		akamai.StartSpinner("Processing Updated Recordsets ", "")
+		recordsetWorkList = recordsetResp.Recordsets
+		for _, crs := range recordsets.Recordsets {
+			// for each updated recordset
+			for i, rs := range recordsetWorkList {
+				// walk the full list and relace
+				if crs.Name == rs.Name && crs.Type == rs.Type {
+					recordsetWorkList[i] = crs
+				} else if rs.Type == "SOA" {
+					// Serial needs to be incremented
+					soavals := strings.Split(rs.Rdata[0], " ")
+					v, _ := strconv.Atoi(soavals[2])
+					soavals[2] = strconv.Itoa(v + 1)
+					rs.Rdata[0] = strings.Join(soavals, " ")
+				}
 			}
 		}
+		akamai.StopSpinnerOk()
 	}
-	akamai.StopSpinnerOk()
 	akamai.StartSpinner("Updating Recordsets ", "")
 	recordsets.Recordsets = recordsetWorkList
 	err = recordsets.Update(zonename, true)
@@ -116,7 +127,7 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 
 	}
 	akamai.StartSpinner("Retrieving Full Recordsets List ", "")
-	recordsetResp, err = dnsv2.GetRecordsets(zonename)
+	recordsetResp, err := dnsv2.GetRecordsets(zonename)
 	if err != nil {
 		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)

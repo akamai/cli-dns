@@ -353,22 +353,26 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 	commands = append(commands, rmRecordCmd)
 
 	// V2 Base flags
-	var baseV2CmdFlags = []cli.Flag{
+
+	var baseV2BaseFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:   "json",
 			Usage:  "Output as JSON",
 			EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
-		},
-		cli.BoolFlag{
-			Name:   "suppress",
-			Usage:  "Suppress command result output. Overrides other output related flags",
-			EnvVar: "AKAMAI_CLI_DNS_" + "SUPPRESS",
 		},
 		cli.StringFlag{
 			Name:  "output",
 			Usage: "Output command results to `FILE`",
 		},
 	}
+
+	baseV2CmdFlags := append(baseV2BaseFlags, []cli.Flag{
+		cli.BoolFlag{
+			Name:   "suppress",
+			Usage:  "Suppress command result output. Overrides other output related flags",
+			EnvVar: "AKAMAI_CLI_DNS_" + "SUPPRESS",
+		},
+	}...)
 
 	baseSetCmdFlags := append(baseV2CmdFlags, []cli.Flag{
 		cli.StringFlag{
@@ -387,7 +391,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Retreive list of zone Recordsets",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdListRecordsets,
-		Flags: append(baseV2CmdFlags, []cli.Flag{
+		Flags: append(baseV2BaseFlags, []cli.Flag{
 			cli.StringSliceFlag{
 				Name:  "type",
 				Usage: "List recordset(s) matching `TYPE`. Multiple flags allowed",
@@ -424,6 +428,10 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		ArgsUsage:   "<zonename>",
 		Action:      cmdUpdateRecordsets,
 		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.BoolFlag{
+				Name:  "overwrite",
+				Usage: "Replace ALL Recordsets",
+			},
 			cli.StringFlag{
 				Name:  "file",
 				Usage: "`FILE` path to JSON formatted recordset content",
@@ -433,11 +441,20 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 	})
 
 	commands = append(commands, cli.Command{
-		Name:         "retrieve-recordset",
-		Description:  "Retrieve recordset",
-		ArgsUsage:    "<zonename>",
-		Action:       cmdRetrieveRecordset,
-		Flags:        baseSetCmdFlags,
+		Name:        "retrieve-recordset",
+		Description: "Retrieve recordset",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdRetrieveRecordset,
+		Flags: append(baseV2BaseFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "Recordset `NAME`",
+			},
+			cli.StringFlag{
+				Name:  "type",
+				Usage: "Recordset `TYPE`",
+			},
+		}...),
 		BashComplete: akamai.DefaultAutoComplete,
 	})
 
@@ -606,7 +623,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Name:        "list-zoneconfig",
 		Description: "List zone configuration(s)",
 		Action:      cmdListZoneconfig,
-		Flags: append(baseV2CmdFlags, []cli.Flag{
+		Flags: append(baseV2BaseFlags, []cli.Flag{
 			cli.StringSliceFlag{
 				Name:  "contractid",
 				Usage: "Contract `ID`. Multiple flags allowed",
@@ -654,7 +671,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description:  "Fetch and display zone configuration",
 		ArgsUsage:    "<zonename>",
 		Action:       cmdRetrieveZoneconfig,
-		Flags:        baseV2CmdFlags,
+		Flags:        baseV2BaseFlags,
 		BashComplete: akamai.DefaultAutoComplete,
 	})
 
