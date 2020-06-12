@@ -49,14 +49,14 @@ $  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
 
 ### Description
 
-   Manage DNS Zones with Fast DNS
+   Manage DNS Zones with Edge DNS
 
 
 
 ### Global Flags
 
 ```
-   --edgerc value  Location of the credentials file (default: "/home/elynes/.edgerc") [$AKAMAI_EDGERC]
+   --edgerc value      Location of the credentials file (default: "/home/elynes/.edgerc") [$AKAMAI_EDGERC]
    --section value     Section of the credentials file (default: "dns") [$AKAMAI_EDGERC_SECTION]
    --accountkey value  Account switch key [$AKAMAI_EDGERC_ACCOUNT_KEY]
 ```
@@ -85,7 +85,7 @@ $  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
 
 Commands are grouped into one of two categories.
 
-*-zoneconfig, *-recordsets and *-recordset commands provide the ability to manage zone configurations directly, as well as manage recordsets indifidually or in groupings. These commands should be preferred.
+*-zoneconfig, *-recordsets and *-recordset commands provide the ability to manage zone configurations directly, as well as manage recordsets individually or in groupings. These commands should be preferred.
 
 *-zone and *-record commands provide a more constrained scope of control, treating the zone and records as a single entity. These commands provide backward compatibility with earlier releases of the package.
 
@@ -111,7 +111,7 @@ Flags:
 To list Primary zones and generate results in json format, the `--type` and `--json` flags would be used. For example:
 
 ```
-$akamai dns list-zonconfig --type primary --json
+$akamai dns list-zoneconfig --type primary --json
 ```
 
 would result in the following output:
@@ -136,7 +136,7 @@ would result in the following output:
 To generate a summary list of zones containing specific text, the `--search` and `--summary` flags would be used. For example:
 
 ```
-$ akamai dns list-zonconfig --search example --summary
+$ akamai dns list-zoneconfig --search example --summary
 ```
 
 would result in the following output:
@@ -161,8 +161,9 @@ The complete command line is:
 Flags: 
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --output FILE  Output command results to FILE
+```
 
-To retrieve a zonconfig and output result in json format, the `--json` flag would be used. For example:
+To retrieve a zoneconfig and output result in json format, the `--json` flag would be used. For example:
 
 ```
 $ akamai dns retrieve-zoneconfig example.com --json
@@ -217,6 +218,7 @@ To create a zone, the desired fields and values would be provided. For example, 
 
 ```
 $ akamai dns create-zoneconfig example_primary.com --type primary --contractid 1-ABC123 --initialize
+```
 
 would create the zone with the following output:
 
@@ -297,8 +299,9 @@ For example, to  update the previously created primary zone and add a comment vi
 
 ```
 $ akamai dns update-zoneconfig example_primary.com --type primary --comment "This is a comment"
+```
 
-would update the zone with the following output:
+would update the zone and provide the following output:
 
 ```
 Zone Configuration
@@ -587,18 +590,97 @@ resulting in ./recordset_a.json would containing:
 
 ### Creating a Recordset
 
+The command `akamai dns create-recordset` is used to create a single recordset. fields and values can be provided on the command line or input file.
 
+The complete command line is:
+
+```
+$ akamai dns create-recordset <zonename> [--json] [--suppress] [--output] [--name] [--type] [--ttl] [--rdata] [--file] 
+
+Flags: 
+   --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
+   --suppress     Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
+   --output FILE  Output command results to FILE
+   --name NAME    Recordset NAME
+   --type TYPE    Recordset TYPE
+   --ttl TTL      Recordset TTL (default: 0)
+   --rdata RDATA  Recordset RDATA. Multiple flags allowed.
+   --file FILE    FILE path to JSON formatted recordset content
+```
+
+To create a recordset via command line, the following would be invoked:
+
+```
+$ akamai dns create-recordset example.com --name a_record_example.com --type A --ttl 600 --rdata 10.1.1.1 --json
+```
+
+and result in the following output:
+
+```
+{
+  "name": "a_record_example.com",
+  "type": "A",
+  "ttl": 600,
+  "rdata": [
+    "10.1.1.1"
+  ]
+}
+``` 
 
 ### Updating a Recordset
 
+he command `akamai dns update-recordset` is used to update a single existing recordset. fields and values can be provided on the command line or input file.
 
+The complete command line is:
+
+```
+$ akamai dns update-recordset <zonename> [--json] [--suppress] [--output] [--name] [--type] [--ttl] [--rdata] [--file] 
+
+Flags: 
+   --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
+   --suppress     Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
+   --output FILE  Output command results to FILE
+   --name NAME    Recordset NAME
+   --type TYPE    Recordset TYPE
+   --ttl TTL      Recordset TTL (default: 0)
+   --rdata RDATA  Record RDATA. Multiple flags allowed.
+   --file FILE    FILE path to JSON formatted recordset content. Allows multiple recordsets.
+```
+
+An example recordset update using an input file would be as follows:
+
+```
+$ akamai dns update-recordset example.com --file ./a_recordset.json --suppress
+```
+
+where the file `./a_recordset.json` contains:
+
+```
+{
+  "name": "a_record_example.com",
+  "type": "A",
+  "ttl": 900,
+  "rdata": [
+    "10.1.1.1"
+  ]
+}
+```
+
+ and return no output.
 
 ### Deleting a Recordset
 
+The command to delete a single recordset is `akamai dns delete-recordset`.
 
+The complete command line is:
 
+```
+$ akamai dns delete-recordset <zonename> [--name] [--type] 
 
-
+Flags: 
+   --name NAME    Recordset NAME
+   --type TYPE    Recordset TYPE
+```
 
 ### Retrieving a Zone
 

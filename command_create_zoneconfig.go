@@ -250,6 +250,9 @@ func renderZoneconfigTable(zone *dnsv2.ZoneResponse, c *cli.Context) string {
 		if len(zone.Comment) > 0 {
 			table.Append([]string{" ", "Comment", zone.Comment})
 		}
+		if len(zone.ContractId) > 0 {
+			table.Append([]string{" ", "ContractId", zone.ContractId})
+		}
 		if strings.ToUpper(ztype) == "SECONDARY" {
 			if len(zone.Masters) > 0 {
 				masters := strings.Join(zone.Masters, " ,")

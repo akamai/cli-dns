@@ -171,7 +171,8 @@ func cmdCreateRecordset(c *cli.Context) error {
 
 func renderRecordsetTable(zone string, set *dnsv2.RecordBody, c *cli.Context) string {
 
-	outString := ""
+	outString := "Zone Recordset"
+	outString += ""
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
 	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})

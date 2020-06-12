@@ -43,7 +43,6 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
-	akamai.StartSpinner("Preparing zone for create ", "")
 	zonename = c.Args().First()
 	if c.IsSet("output") {
 		outputPath = c.String("output")
