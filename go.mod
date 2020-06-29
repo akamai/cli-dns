@@ -3,7 +3,7 @@ module github.com/akamai/cli-dns
 go 1.13
 
 require (
-	github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.18-0.20200610205113-1b29df133381
+	github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.18-0.20200622155256-c581a3c53489
 	github.com/akamai/cli-common-golang v0.0.0-20200508194158-7dad60634830
 	github.com/briandowns/spinner v1.11.1 // indirect
 	github.com/dshafik/gozone v0.0.0-20180309042724-80dfb510e448

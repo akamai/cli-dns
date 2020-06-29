@@ -95,20 +95,28 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		akamai.StopSpinnerOk()
 		akamai.StartSpinner("Processing Updated Recordsets ", "")
 		recordsetWorkList = recordsetResp.Recordsets
+		soaInSet := false
+		soaIndex := 0
 		for _, crs := range recordsets.Recordsets {
 			// for each updated recordset
 			for i, rs := range recordsetWorkList {
 				// walk the full list and relace
 				if crs.Name == rs.Name && crs.Type == rs.Type {
 					recordsetWorkList[i] = crs
+					if crs.Type == "SOA" {
+						soaInSet = true
+					}
 				} else if rs.Type == "SOA" {
-					// Serial needs to be incremented
-					soavals := strings.Split(rs.Rdata[0], " ")
-					v, _ := strconv.Atoi(soavals[2])
-					soavals[2] = strconv.Itoa(v + 1)
-					rs.Rdata[0] = strings.Join(soavals, " ")
+					soaIndex = i
 				}
 			}
+		}
+		if !soaInSet && (soaIndex > 0 || recordsetWorkList[soaIndex].Type == "SOA") {
+			// Serial needs to be incremented
+			soavals := strings.Split(recordsetWorkList[soaIndex].Rdata[0], " ")
+			v, _ := strconv.Atoi(soavals[2])
+			soavals[2] = strconv.Itoa(v + 1)
+			recordsetWorkList[soaIndex].Rdata[0] = strings.Join(soavals, " ")
 		}
 		akamai.StopSpinnerOk()
 	}
