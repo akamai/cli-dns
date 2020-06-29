@@ -96,11 +96,10 @@ A list of existing zone configurations can be retrieved by using the `akamai dns
 The complete command line is:
 
 ```
-   akamai dns list-zoneconfig  [--json] [--suppress] [--output] [--contractid] [--type] [--search] [--summary] 
+   akamai dns list-zoneconfig  [--json] [--output] [--contractid] [--type] [--search] [--summary] 
 
 Flags: 
    --json           Output as JSON [$AKAMAI_CLI_DNS_JSON]
-   --suppress       Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
    --output FILE    Output command results to FILE
    --contractid ID  Contract ID. Multiple flags allowed
    --type TYPE      Zone TYPE. Multiple flags allowed
@@ -509,7 +508,7 @@ would result in the following output:
 
 ### Updating multiple zone Recordsets 
 
-The command `akamai dns update-recordsets` is used to update multiple recordsets in one command invocation. Note: The default operation of the update-recordlists command is to specifically replace the recordsets in the provided file if they exist. The `overwrite' flag will REPLACE ALL existing recordsets in the zone.
+The command `akamai dns update-recordsets` is used to update multiple recordsets in one command invocation. Note: The default operation of the update-recordsets command is to specifically replace the recordsets in the provided file if they exist. The `overwrite' flag will REPLACE ALL existing recordsets in the zone.
 
 The complete command line is:
 
@@ -524,7 +523,7 @@ Flags:
    --file FILE    FILE path to JSON formatted recordset content
 ```
 
-The following incorrect example updates the recordsets with the same file used in the previous create-recordlists example WITH the `--overwrite` flag. 
+The following incorrect example updates the recordsets with the same file used in the previous create-recordsets example WITH the `--overwrite` flag. 
 
 ```
 $ akamai dns update-recordsets --file new_recordsets.json --overwrite
@@ -554,7 +553,7 @@ Flags:
    --type TYPE    Recordset TYPE
 ```
 
-An recordset retrieval example is the following:
+A recordset retrieval example is the following:
 
 ```
 $ akamai dns retrieve-recordset egl_clidns_primary_test_1.com --name a_rs_example.com --type A
@@ -629,7 +628,7 @@ and result in the following output:
 
 ### Updating a Recordset
 
-he command `akamai dns update-recordset` is used to update a single existing recordset. fields and values can be provided on the command line or input file.
+The command `akamai dns update-recordset` is used to update a single existing recordset. fields and values can be provided on the command line or input file.
 
 The complete command line is:
 
