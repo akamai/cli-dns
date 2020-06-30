@@ -20,14 +20,14 @@ import (
 )
 
 var (
-	VERSION = "0.2.0"
+	VERSION = "0.3.0"
 )
 
 func main() {
 	akamai.CreateApp(
 		"dns",
-		"A CLI for Fast DNS",
-		"Manage DNS Zones with Fast DNS",
+		"A CLI for Edge DNS",
+		"Manage DNS Zones with Edge DNS",
 		VERSION,
 		"dns",
 		commandLocator,
