@@ -1,3 +1,8 @@
+<!--esi 
+<esi:assign name="dac_stylesheets" value="['/stylesheets/screen.css']" />
+<esi:assign name="dac_footer_js" value="['/javascripts/app/toc.js']" />
+<esi:eval src="/internal/header.html?http" dca="esi" />
+-->
 # Akamai CLI for Edge DNS
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/akamai/cli-dns)](https://goreportcard.com/report/github.com/akamai/cli-dns) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns?ref=badge_shield)
@@ -785,3 +790,7 @@ If the command is run in a non-interactive terminal, **or** the `--non-interacti
 This package is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for details.
 
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fakamai%2Fcli-dns?ref=badge_large)
+
+<!--esi 
+<esi:eval src="/internal/footer.html?http" dca="esi" />
+-->
