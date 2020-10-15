@@ -671,7 +671,14 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description:  "Fetch and display zone configuration",
 		ArgsUsage:    "<zonename>",
 		Action:       cmdRetrieveZoneconfig,
-		Flags:        baseV2BaseFlags,
+		//Flags:        baseV2BaseFlags,
+                Flags: append(baseZoneCmdFlags, []cli.Flag{
+                        cli.BoolFlag{
+                                Name:  "dns",
+                                Usage: "Input is in DNS Zone format",
+                        },
+                }...),
+
 		BashComplete: akamai.DefaultAutoComplete,
 	})
 
@@ -681,11 +688,14 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		ArgsUsage:   "<zonename>",
 		Action:      cmdUpdateZoneconfig,
 		Flags: append(baseZoneCmdFlags, []cli.Flag{
-			cli.StringFlag{
-				Name:  "contractid",
-				Usage: "Contract `ID`",
-				//Required: true,
-			},
+                        cli.BoolFlag{
+                                Name:  "dns",
+                                Usage: "Input is in DNS Zone format",
+                        },
+                        cli.StringFlag{
+                                Name:  "file",
+                                Usage: "Read input from `FILE`",
+                        },
 		}...),
 		BashComplete: akamai.DefaultAutoComplete,
 	})

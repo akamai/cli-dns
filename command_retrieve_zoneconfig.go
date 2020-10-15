@@ -36,12 +36,16 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 	var (
 		zonename   string
 		outputPath string
+		results    string
+		zone	   *dnsv2.ZoneResponse
 	)
 
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
+
+	masterfile := c.IsSet("dns") && c.Bool("dns") 
 
 	zonename = c.Args().First()
 	if c.IsSet("output") {
@@ -50,7 +54,11 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 	}
 
 	akamai.StartSpinner("Retrieving Zone  ", "")
-	zone, err := dnsv2.GetZone(zonename)
+	if masterfile {
+		results, err = dnsv2.GetMasterZoneFile(zonename)
+	} else {
+		zone, err = dnsv2.GetZone(zonename)
+	}
 	if err != nil {
 		if dnsv2.IsConfigDNSError(err) && err.(dnsv2.ConfigDNSError).NotFound() {
 			akamai.StopSpinnerFail()
@@ -59,21 +67,22 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Zone retrieval failed. Error: %s", err.Error())), 1)
 		}
-
 	}
 	akamai.StopSpinnerOk()
-	results := ""
 	akamai.StartSpinner("Assembling Zone Content ", "")
+
 	// full output
-	if c.IsSet("json") && c.Bool("json") {
-		zjson, err := json.MarshalIndent(zone, "", "  ")
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Unable to display zone"), 1)
+	if !masterfile {
+		if c.IsSet("json") && c.Bool("json") {
+			zjson, err := json.MarshalIndent(zone, "", "  ")
+			if err != nil {
+				akamai.StopSpinnerFail()
+				return cli.NewExitError(color.RedString("Unable to display zone"), 1)
+			}
+			results = string(zjson)
+		} else {
+			results = renderZoneconfigTable(zone, c)
 		}
-		results = string(zjson)
-	} else {
-		results = renderZoneconfigTable(zone, c)
 	}
 	akamai.StopSpinnerOk()
 
