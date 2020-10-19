@@ -692,10 +692,6 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
                                 Name:  "dns",
                                 Usage: "Input is in DNS Zone format",
                         },
-                        cli.StringFlag{
-                                Name:  "file",
-                                Usage: "Read input from `FILE`",
-                        },
 		}...),
 		BashComplete: akamai.DefaultAutoComplete,
 	})

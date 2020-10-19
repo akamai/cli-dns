@@ -144,7 +144,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
  
 	if masterfile {
 	        akamai.StartSpinner("Updating Master Zone File ", "")
-		if err = dnsv2.PostMasterZoneFile(zonename, &masterZoneFileData); err != nil {
+		if err = dnsv2.PostMasterZoneFile(zonename, masterZoneFileData); err != nil {
                         akamai.StopSpinnerFail()
                         return cli.NewExitError(color.RedString(fmt.Sprintf("Master Zone File update failed. Error: %s", err.Error())), 1)
                 }
