@@ -37,7 +37,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		zonename   string
 		outputPath string
 		results    string
-		zone	   *dnsv2.ZoneResponse
+		zone       *dnsv2.ZoneResponse
 	)
 
 	if c.NArg() == 0 {
@@ -45,7 +45,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
-	masterfile := c.IsSet("dns") && c.Bool("dns") 
+	masterfile := c.IsSet("dns") && c.Bool("dns")
 
 	zonename = c.Args().First()
 	if c.IsSet("output") {

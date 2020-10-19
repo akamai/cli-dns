@@ -667,17 +667,17 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 	})
 
 	commands = append(commands, cli.Command{
-		Name:         "retrieve-zoneconfig",
-		Description:  "Fetch and display zone configuration",
-		ArgsUsage:    "<zonename>",
-		Action:       cmdRetrieveZoneconfig,
+		Name:        "retrieve-zoneconfig",
+		Description: "Fetch and display zone configuration",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdRetrieveZoneconfig,
 		//Flags:        baseV2BaseFlags,
-                Flags: append(baseZoneCmdFlags, []cli.Flag{
-                        cli.BoolFlag{
-                                Name:  "dns",
-                                Usage: "Input is in DNS Zone format",
-                        },
-                }...),
+		Flags: append(baseZoneCmdFlags, []cli.Flag{
+			cli.BoolFlag{
+				Name:  "dns",
+				Usage: "Input is in DNS Zone format",
+			},
+		}...),
 
 		BashComplete: akamai.DefaultAutoComplete,
 	})
@@ -688,10 +688,10 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		ArgsUsage:   "<zonename>",
 		Action:      cmdUpdateZoneconfig,
 		Flags: append(baseZoneCmdFlags, []cli.Flag{
-                        cli.BoolFlag{
-                                Name:  "dns",
-                                Usage: "Input is in DNS Zone format",
-                        },
+			cli.BoolFlag{
+				Name:  "dns",
+				Usage: "Input is in DNS Zone format",
+			},
 		}...),
 		BashComplete: akamai.DefaultAutoComplete,
 	})
@@ -710,6 +710,81 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 			BashComplete: akamai.DefaultAutoComplete,
 		},
 	)
+
+	commands = append(commands, cli.Command{
+		Name:        "submit-bulkzones",
+		Description: "Submit Bulk Zones request",
+		Action:      cmdSubmitBulkZones,
+		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "contractid",
+				Usage: "Contract `ID`. Required for create.",
+			},
+			cli.StringFlag{
+				Name:  "groupid",
+				Usage: "Group `ID`. Optional for create.",
+			},
+			cli.BoolFlag{
+				Name:  "bypasszonesafety",
+				Usage: "Bypass zone safety check. Optional for delete.",
+			},
+			cli.BoolFlag{
+				Name:  "create",
+				Usage: "Bulk zone create operation.",
+			},
+			cli.BoolFlag{
+				Name:  "delete",
+				Usage: "Bulk zone delete operation.",
+			},
+			cli.StringFlag{
+				Name:  "file",
+				Usage: "Read JSON formatted input from `FILE`",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "status-bulkzones",
+		Description: "Query Bulk Zones Request Status",
+		Action:      cmdStatusBulkZones,
+		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "requestid",
+				Usage: "Request Id",
+			},
+			cli.BoolFlag{
+				Name:  "create",
+				Usage: "Bulk zone create operation.",
+			},
+			cli.BoolFlag{
+				Name:  "delete",
+				Usage: "Bulk zone delete operation.",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "result-bulkzones",
+		Description: "Query Bulk Zones Result Summary",
+		Action:      cmdResultBulkZones,
+		Flags: append(baseV2CmdFlags, []cli.Flag{
+			cli.StringFlag{
+				Name:  "requestid",
+				Usage: "Request Id",
+			},
+			cli.BoolFlag{
+				Name:  "create",
+				Usage: "Bulk zone create operation.",
+			},
+			cli.BoolFlag{
+				Name:  "delete",
+				Usage: "Bulk zone delete operation.",
+			},
+		}...),
+		BashComplete: akamai.DefaultAutoComplete,
+	})
 
 	return commands, nil
 }

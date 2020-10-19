@@ -36,9 +36,9 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	dnsv2.Init(config)
 
 	var (
-		zonename   string
-		outputPath string
-		inputPath  string
+		zonename           string
+		outputPath         string
+		inputPath          string
 		masterZoneFileData string
 	)
 
@@ -69,7 +69,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure while checking zone existance. Error: %s", err.Error())), 1)
 		}
 	}
-	masterfile :=  c.IsSet("dns") && c.Bool("dns")
+	masterfile := c.IsSet("dns") && c.Bool("dns")
 	if c.IsSet("file") {
 		// Read in json file
 		data, err := ioutil.ReadFile(inputPath)
@@ -79,7 +79,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		}
 		if masterfile {
 			masterZoneFileData = string(data)
- 		} else {
+		} else {
 			// set local variables and Object
 			err = json.Unmarshal(data, &newZone)
 			if err != nil {
@@ -141,18 +141,18 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zone command line values or input file are required"), 1)
 	}
- 
+
 	if masterfile {
-	        akamai.StartSpinner("Updating Master Zone File ", "")
+		akamai.StartSpinner("Updating Master Zone File ", "")
 		if err = dnsv2.PostMasterZoneFile(zonename, masterZoneFileData); err != nil {
-                        akamai.StopSpinnerFail()
-                        return cli.NewExitError(color.RedString(fmt.Sprintf("Master Zone File update failed. Error: %s", err.Error())), 1)
-                }
+			akamai.StopSpinnerFail()
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Master Zone File update failed. Error: %s", err.Error())), 1)
+		}
 		akamai.StopSpinnerOk()
 		return nil
 	}
 
-       	akamai.StartSpinner("Updating Zone  ", "")
+	akamai.StartSpinner("Updating Zone  ", "")
 	err = dnsv2.ValidateZone(newZone)
 	if err != nil {
 		akamai.StopSpinnerFail()
@@ -171,7 +171,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read zone content. Error: %s", err.Error())), 1)
 	}
-        akamai.StopSpinnerOk()
+	akamai.StopSpinnerOk()
 
 	// suppress result output?
 	if c.IsSet("suppress") && c.Bool("suppress") {
