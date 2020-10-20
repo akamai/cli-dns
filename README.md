@@ -84,13 +84,18 @@ $  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
   create-zoneconfig
   retrieve-zoneconfig
   update-zoneconfig
+  submit-bulkzones
+  status-bulkzones
+  result-bulkzones
   list
   help
 ```
 
-Commands are grouped into one of two categories.
+Commands are grouped into several categories.
 
 *-zoneconfig, *-recordsets and *-recordset commands provide the ability to manage zone configurations directly, as well as manage recordsets individually or in groupings. These commands should be preferred.
+
+*-bulkzones commands provide the ability to submit and monitor bulk zone operations.
 
 *-zone and *-record commands provide a more constrained scope of control, treating the zone and records as a single entity. These commands provide backward compatibility with earlier releases of the package.
 
@@ -160,11 +165,12 @@ An existing zone configuration can be retrieved by using the `akamai dns retriev
 The complete command line is:
 
 ```
-   akamai dns retrieve-zoneconfig <zonename> [--json] [--output] 
+   akamai dns retrieve-zoneconfig <zonename> [--json] [--output] [--dns]
 
 Flags: 
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --output FILE  Output command results to FILE
+   --dns          Retrieve Zone Master File
 ```
 
 To retrieve a zoneconfig and output result in json format, the `--json` flag would be used. For example:
@@ -279,7 +285,7 @@ A zone configuration can be updated by using the `akamai dns update-zoneconfig` 
 The complete command line is:
 
 ```
-akamai dns update-zoneconfig <zonename> [--json] [--suppress] [--output] [--type] [--master] [--comment] [--signandserve] [--algorithm] [--tsigname] [--tsigalgorithm] [--tsigsecret] [--target] [--endcustomerid] [--file] [--contractid]
+akamai dns update-zoneconfig <zonename> [--json] [--suppress] [--output] [--type] [--master] [--comment] [--signandserve] [--algorithm] [--tsigname] [--tsigalgorithm] [--tsigsecret] [--target] [--endcustomerid] [--file] [--contractid] [--dns]
 
 Flags:
    --json                         Output as JSON [$AKAMAI_CLI_DNS_JSON]
@@ -297,6 +303,7 @@ Flags:
    --endcustomerid ENDCUSTOMERID  ENDCUSTOMERID
    --contractid ID                Contract ID
    --file FILE                    Read JSON formatted input from FILE
+   --dns                          Input is Zone Master File
 ```
 
 For example, to  update the previously created primary zone and add a comment via the command line:
@@ -684,6 +691,190 @@ $ akamai dns delete-recordset <zonename> [--name] [--type]
 Flags: 
    --name NAME    Recordset NAME
    --type TYPE    Recordset TYPE
+```
+
+### Submit Bulk Zone Request
+
+To submit a create or delete bulk zone operation request, use the following command:
+
+The complete command line is:
+
+```
+$ akamai dns submit-bulkzones  [--json] [--output] [--suppress] [--contractid] [--groupid] [--bypasszonesafety] [--create] [--delete] [--file]
+
+Flags:
+   --json              Output as JSON [$AKAMAI_CLI_DNS_JSON]
+   --output FILE       Output command results to FILE
+   --suppress          Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
+   --contractid ID     Contract ID. Required for create.
+   --groupid ID        Group ID. Optional for create.
+   --bypasszonesafety  Bypass zone safety check. Optional for delete.
+   --create            Bulk zone create operation.
+   --delete            Bulk zone delete operation.
+   --file FILE         Read JSON formatted input from FILE
+```
+
+An example create submit request  would be as follows:
+
+```
+$ akamai dns  --edgerc ~/.edgerc --section default submit-bulkzones -create -contractid 1-3CV382 -groupid 18432 -file bulkcreate.json
+Preparing bulk zones submit request
+Submitting Bulk Zones request
+Submitting Bulk Zones request  ... [OK]
+
+Assembling Bulk Zone Response Content
+Assembling Bulk Zone Response Content ... [OK]
+
+Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62
+Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62 ... [OK]
+
+
+
+Bulk Zones Request Submission Status
+
+  Request Id        f3fcbf11-1b03-420e-9e2b-88cd0096fa62
+
+  Expiration Date   2020-10-27T13:23:20.042484Z
+```
+
+where the file `./bulkcreate.json` contains:
+
+```
+{
+    "zones": [
+        {
+            "zone": "one.xxx_testbulk.net",
+            "type": "secondary",
+            "comment": "testing bulk operations",
+            "masters": [
+                "1.2.3.4",
+                "1.2.3.10"
+            ]
+        },
+        {
+            "zone": "two.xxx_testbulk.net",
+            "type": "secondary",
+            "comment": "testing bulk operations",
+            "masters": [
+                "1.2.3.40",
+                "1.2.3.100"
+            ]
+        }
+    ]
+}
+```
+
+An example delete submit request would be as follows:
+
+```
+$ akamai dns  --edgerc ~/.edgerc --section default submit-bulkzones -delete -file bulkdelete.json
+Preparing bulk zones submit request
+Submitting Bulk Zones request
+Submitting Bulk Zones request  ... [OK]
+
+Assembling Bulk Zone Response Content
+Assembling Bulk Zone Response Content ... [OK]
+
+Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62
+Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62 ... [OK]
+
+
+
+Bulk Zones Request Submission Status
+
+  Request Id        f3fcbf11-1b03-420e-9e2b-88cd0096fa62
+
+  Expiration Date   2020-10-27T13:23:20.042484Z
+```
+
+where the file `./bulkdelete.json` contains:
+
+```
+{
+    "zones": [
+            "one.xxx_testbulk.net",
+            "two.xxx_testbulk.net"
+    ]
+}
+```
+
+### Get Bulk Zone Request Status 
+
+To retrieve the current status of a create or delete bulk zone operation request, use the following command:
+
+The complete command line is:
+
+```
+$ akamai dns status-bulkzones  [--json] [--output] [--create] [--delete] [--requestid]
+
+Flags:
+   --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
+   --output FILE      Output command results to FILE
+   --requestid value  Request Id
+   --create           Bulk zone create operation.
+   --delete           Bulk zone delete operation.
+```
+
+An example status check for a request would be as follows:
+
+```
+$ akamai dns  --edgerc ~/.edgerc --section default status-bulkzones -create -requestid 309679b5-1ab1-4837-9666-0019d1be891e -json
+Preparing bulk zones status request
+Submitting Bulk Zones request 
+Submitting Bulk Zones request  ... [OK]
+
+Assembling Bulk Zone Response Content
+Assembling Bulk Zone Response Content ... [OK]
+
+
+{
+  "requestId": "309679b5-1ab1-4837-9666-0019d1be891e",
+  "zonesSubmitted": 2,
+  "successCount": 2,
+  "failureCount": 0,
+  "isComplete": true,
+  "expirationDate": "2020-10-26T18:03:21.072004Z"
+}
+```
+
+### Get Bulk Zone Request Result
+
+To retrieve the result of a create or delete bulk zone operation request, use the following command:
+
+The complete command line is:
+
+```
+$ akamai dns status-bulkzones  [--json] [--output] [--create] [--delete] [--requestid]
+
+Flags:
+   --json             Output as JSON [$AKAMAI_CLI_DNS_JSON]
+   --output FILE      Output command results to FILE
+   --requestid value  Request Id
+   --create           Bulk zone create operation.
+   --delete           Bulk zone delete operation.
+
+```
+
+An example result retrieval for a request would be as follows:
+
+```
+$ akamai dns  --edgerc ~/.edgerc --section default result-bulkzones -delete -requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 -json
+Preparing bulk zones result request
+Submitting Bulk Zones request
+Submitting Bulk Zones request  ... [OK]
+
+Assembling Bulk Zone Response Content
+Assembling Bulk Zone Response Content ... [OK]
+
+
+{
+  "requestId": "f3fcbf11-1b03-420e-9e2b-88cd0096fa62",
+  "successfullyDeletedZones": [
+    "one.xxx_testbulk.net",
+    "two.xxx_testbulk.net"
+  ],
+  "FailedZones": []
+}
 ```
 
 ### Retrieving a Zone

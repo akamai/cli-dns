@@ -182,7 +182,7 @@ func renderBulkZonesRequestStatusTable(submitStatus *dnsv2.BulkZonesResponse, c 
 	//bold := color.New(color.FgWhite, color.Bold)
 	outString := ""
 	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Bulk Zones Create Submission Status")
+	outString += fmt.Sprintln("Bulk Zones Request Submission Status")
 	outString += fmt.Sprintln(" ")
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
