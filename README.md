@@ -195,6 +195,30 @@ would result in the following output:
 } 
 ```
 
+To retrieve the master zone file and output to the console, an example would be:
+
+```
+$ akamai dns retrieve-zoneconfig xxx_primary_test.com -dns
+Retrieving Zone
+Retrieving Zone  ... [OK]
+
+Assembling Zone Content
+Assembling Zone Content ... [OK]
+
+
+;; File Generated at 2020-10-21T21:22:58.672933Z
+;; Last Modified at 2020-10-19T14:54:56.407659Z[UTC]
+;; Version Identifier 166415f9-0744-4acc-9ca1-84173df6f69d
+xxx_primary_test.com.        86400   IN      NS      a4-65.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a13-65.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a3-64.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a2-64.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a12-65.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a1-98.akam.net.
+xxx_primary_test.com.        86400   IN      SOA     a1-98.akam.net. hostmaster.xxx_primary_test.com. 2020052603 3600 600 604800 300
+arec.xxx_primary_test.com.   1800    IN      A       1.2.4.8
+```
+
 ### Creating a Zone Configuration
 
 A zone configuration can be created by using the `akamai dns create-zoneconfig` command. The configuration can be provided as command line values or json file.
@@ -332,6 +356,31 @@ Zone Configuration
                            LastModifiedDate   2020-06-09T18:06:01.266155Z
 
                            VersionId          a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e
+```
+
+To update the master zone file (previously retrieved), an example would be:
+
+```
+$ akamai dns update-zoneconfig xxx_primary_test.com -dns -file ./master_file
+Preparing zone for update
+Updating Master Zone File
+Updating Master Zone File ... [OK]
+```
+
+where ./master_file contains the following:
+
+```
+;; File Generated at 2020-10-21T21:22:58.672933Z
+;; Last Modified at 2020-10-19T14:54:56.407659Z[UTC]
+;; Version Identifier 166415f9-0744-4acc-9ca1-84173df6f69d
+xxx_primary_test.com.        86400   IN      NS      a4-65.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a13-65.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a3-64.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a2-64.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a12-65.akam.net.
+xxx_primary_test.com.        86400   IN      NS      a1-98.akam.net.
+xxx_primary_test.com.        86400   IN      SOA     a1-98.akam.net. hostmaster.xxx_primary_test.com. 2020052604 3600 600 604800 300
+arec.xxx_primary_test.com.   1800    IN      A       1.2.3.4
 ```
 
 ### Listing a Zone's Recordsets

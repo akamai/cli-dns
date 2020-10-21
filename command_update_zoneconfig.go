@@ -33,7 +33,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	dnsv2.Init(config)
 
 	var (
 		zonename           string
@@ -50,14 +49,59 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	akamai.StartSpinner("Preparing zone for update ", "")
 	zonename = c.Args().First()
 	newZone := &dnsv2.ZoneCreate{}
+
+	masterfile := c.IsSet("dns") && c.Bool("dns")
+
 	if c.IsSet("file") {
 		inputPath = c.String("file")
 		inputPath = filepath.FromSlash(inputPath)
+		if c.IsSet("type") {
+			fmt.Println("Warning: Zone Field and File args are defined. Field values will be ignored!")
+		}
+	} else if !c.IsSet("type") && !masterfile {
+		akamai.StopSpinnerFail()
+		cli.ShowCommandHelp(c, c.Command.Name)
+		return cli.NewExitError(color.RedString("Either zone command line field values or input file are required"), 1)
 	}
+
 	if c.IsSet("output") {
 		outputPath = c.String("output")
 		outputPath = filepath.FromSlash(outputPath)
 	}
+
+	if c.IsSet("file") {
+		// Read in json file
+		data, err := ioutil.ReadFile(inputPath)
+		if err != nil {
+			akamai.StopSpinnerFail()
+			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
+		}
+		if masterfile {
+			masterZoneFileData = string(data)
+			if config.MaxBody < len(masterZoneFileData) {
+				if len(masterZoneFileData) > httpMaxBody {
+					// limited by config.MaxBody max (int)
+					akamai.StopSpinnerFail()
+					return cli.NewExitError(color.RedString("Master Zone File size too large to process"), 1)
+				}
+				if config.MaxBody < len(masterZoneFileData) {
+					config.MaxBody = len(masterZoneFileData)
+				}
+			}
+		} else {
+			// set local variables and Object
+			err = json.Unmarshal(data, &newZone)
+			if err != nil {
+				akamai.StopSpinnerFail()
+				return cli.NewExitError(color.RedString("Failed to parse json file content into zone object"), 1)
+			}
+			zonename = newZone.Zone
+		}
+	}
+
+	// init the library
+	dnsv2.Init(config)
+
 	// See if already exists
 	zone, err := dnsv2.GetZone(zonename)
 	if err != nil {
@@ -69,26 +113,8 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure while checking zone existance. Error: %s", err.Error())), 1)
 		}
 	}
-	masterfile := c.IsSet("dns") && c.Bool("dns")
-	if c.IsSet("file") {
-		// Read in json file
-		data, err := ioutil.ReadFile(inputPath)
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
-		}
-		if masterfile {
-			masterZoneFileData = string(data)
-		} else {
-			// set local variables and Object
-			err = json.Unmarshal(data, &newZone)
-			if err != nil {
-				akamai.StopSpinnerFail()
-				return cli.NewExitError(color.RedString("Failed to parse json file content into zone object"), 1)
-			}
-			zonename = newZone.Zone
-		}
-	} else if c.IsSet("type") {
+
+	if c.IsSet("type") && !c.IsSet("file") {
 		newZone.Zone = zonename
 		newZone.Type = strings.ToUpper(c.String("type"))
 		if c.IsSet("contractid") {
@@ -136,10 +162,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		} else {
 			newZone.EndCustomerId = zone.EndCustomerId
 		}
-	} else {
-		akamai.StopSpinnerFail()
-		cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zone command line values or input file are required"), 1)
 	}
 
 	if masterfile {

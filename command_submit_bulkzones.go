@@ -125,8 +125,9 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString("Failed to parse json file content into bulk zones object"), 1)
 	}
-	if len(data) > requestMaxBody {
-		requestMaxBody = len(data)
+	sdata := string(data)
+	if len(sdata) > requestMaxBody {
+		requestMaxBody = len(sdata)
 	}
 	if requestMaxBody > config.MaxBody {
 		if requestMaxBody > httpMaxBody {
