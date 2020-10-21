@@ -733,9 +733,9 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Query Bulk Zones Request Status",
 		Action:      cmdStatusBulkZones,
 		Flags: append(baseV2BaseFlags, []cli.Flag{
-			cli.StringFlag{
+			cli.StringSliceFlag{
 				Name:  "requestid",
-				Usage: "Request Id",
+				Usage: "Request Id. Multiple args allowed.",
 			},
 			cli.BoolFlag{
 				Name:  "create",
@@ -754,9 +754,9 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Query Bulk Zones Result Summary",
 		Action:      cmdResultBulkZones,
 		Flags: append(baseV2BaseFlags, []cli.Flag{
-			cli.StringFlag{
+			cli.StringSliceFlag{
 				Name:  "requestid",
-				Usage: "Request Id",
+				Usage: "Request Id. Multiple args allowed.",
 			},
 			cli.BoolFlag{
 				Name:  "create",
@@ -770,20 +770,20 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		BashComplete: akamai.DefaultAutoComplete,
 	})
 
-        commands = append(commands,
-                cli.Command{
-                        Name:        "list",
-                        Description: "List commands",
-                        Action:      akamai.CmdList,
-                },
-                cli.Command{
-                        Name:         "help",
-                        Description:  "Displays help information",
-                        ArgsUsage:    "[command] [sub-command]",
-                        Action:       akamai.CmdHelp,
-                        BashComplete: akamai.DefaultAutoComplete,
-                },
-        )
+	commands = append(commands,
+		cli.Command{
+			Name:        "list",
+			Description: "List commands",
+			Action:      akamai.CmdList,
+		},
+		cli.Command{
+			Name:         "help",
+			Description:  "Displays help information",
+			ArgsUsage:    "[command] [sub-command]",
+			Action:       akamai.CmdHelp,
+			BashComplete: akamai.DefaultAutoComplete,
+		},
+	)
 
 	return commands, nil
 }

@@ -37,15 +37,14 @@ func cmdStatusBulkZones(c *cli.Context) error {
 	dnsv2.Init(config)
 
 	var (
-		requestid  string
 		outputPath string
+		requestids []string
 		op         = "create"
 	)
 
-	if c.IsSet("requestid") {
-		requestid = c.String("requestid")
-	} else {
-		return cli.NewExitError(color.RedString("requestid is required. "), 1)
+	requestids = c.StringSlice("requestid")
+	if len(requestids) < 1 {
+		return cli.NewExitError(color.RedString("requestid(s) required. "), 1)
 	}
 
 	akamai.StartSpinner("Preparing bulk zones status request ", "")
@@ -62,17 +61,21 @@ func cmdStatusBulkZones(c *cli.Context) error {
 		outputPath = filepath.FromSlash(outputPath)
 	}
 
-	akamai.StartSpinner("Submitting Bulk Zones request  ", "")
-	//  Submit
 	var statusResp *dnsv2.BulkStatusResponse
-	if op == "create" {
-		statusResp, err = dnsv2.GetBulkZoneCreateStatus(requestid)
-	} else {
-		statusResp, err = dnsv2.GetBulkZoneDeleteStatus(requestid)
-	}
-	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request Status Query failedd. Error: %s", err.Error())), 1)
+	statusRespList := make([]*dnsv2.BulkStatusResponse, 0)
+	akamai.StartSpinner("Submitting Bulk Zones request(s)  ", "")
+	for _, requestid := range requestids {
+		//  Submit
+		if op == "create" {
+			statusResp, err = dnsv2.GetBulkZoneCreateStatus(requestid)
+		} else {
+			statusResp, err = dnsv2.GetBulkZoneDeleteStatus(requestid)
+		}
+		if err != nil {
+			akamai.StopSpinnerFail()
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request Status Query failedd. Error: %s", err.Error())), 1)
+		}
+		statusRespList = append(statusRespList, statusResp)
 	}
 	akamai.StopSpinnerOk()
 
@@ -80,14 +83,14 @@ func cmdStatusBulkZones(c *cli.Context) error {
 	akamai.StartSpinner("Assembling Bulk Zone Response Content ", "")
 	// full output
 	if c.IsSet("json") && c.Bool("json") {
-		zjson, err := json.MarshalIndent(statusResp, "", "  ")
+		zjson, err := json.MarshalIndent(statusRespList, "", "  ")
 		if err != nil {
 			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Unable to process status response"), 1)
+			return cli.NewExitError(color.RedString("Unable to process status response(s)"), 1)
 		}
 		results = string(zjson)
 	} else {
-		results = renderBulkZonesStatusTable(statusResp, c)
+		results = renderBulkZonesStatusTable(statusRespList, c)
 	}
 	akamai.StopSpinnerOk()
 
@@ -117,7 +120,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 
 }
 
-func renderBulkZonesStatusTable(submitStatus *dnsv2.BulkStatusResponse, c *cli.Context) string {
+func renderBulkZonesStatusTable(submitStatusList []*dnsv2.BulkStatusResponse, c *cli.Context) string {
 
 	//bold := color.New(color.FgWhite, color.Bold)
 	outString := ""
@@ -126,7 +129,7 @@ func renderBulkZonesStatusTable(submitStatus *dnsv2.BulkStatusResponse, c *cli.C
 	outString += fmt.Sprintln(" ")
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
+	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
 	table.SetReflowDuringAutoWrap(false)
 	table.SetAutoWrapText(false)
 	table.SetRowLine(true)
@@ -135,12 +138,14 @@ func renderBulkZonesStatusTable(submitStatus *dnsv2.BulkStatusResponse, c *cli.C
 	table.SetRowSeparator(" ")
 	table.SetBorder(false)
 
-	table.Append([]string{"Request Id", submitStatus.RequestId})
-	table.Append([]string{"Zones Submitted", strconv.Itoa(submitStatus.ZonesSubmitted)})
-	table.Append([]string{"Success Count", strconv.Itoa(submitStatus.SuccessCount)})
-	table.Append([]string{"Failure Count", strconv.Itoa(submitStatus.FailureCount)})
-	table.Append([]string{"Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
-	table.Append([]string{"Expiration Date", submitStatus.ExpirationDate})
+	for _, submitStatus := range submitStatusList {
+		table.Append([]string{"Request Id", submitStatus.RequestId, ""})
+		table.Append([]string{"", "Zones Submitted", strconv.Itoa(submitStatus.ZonesSubmitted)})
+		table.Append([]string{"", "Success Count", strconv.Itoa(submitStatus.SuccessCount)})
+		table.Append([]string{"", "Failure Count", strconv.Itoa(submitStatus.FailureCount)})
+		table.Append([]string{"", "Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
+		table.Append([]string{"", "Expiration Date", submitStatus.ExpirationDate})
+	}
 	table.Render()
 	outString += fmt.Sprintln(tableString.String())
 

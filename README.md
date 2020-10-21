@@ -714,6 +714,8 @@ Flags:
    --file FILE         Read JSON formatted input from FILE
 ```
 
+NOTE: The CLI currently limits the number of zones in a submit request to 1000. If an invocation presents more than 1000 zones, the zones will be submitted in batches of 1000 and multiple Request Ids will be returned.
+
 An example create submit request  would be as follows:
 
 ```
@@ -810,7 +812,7 @@ $ akamai dns status-bulkzones  [--json] [--output] [--create] [--delete] [--requ
 Flags:
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --output FILE      Output command results to FILE
-   --requestid value  Request Id
+   --requestid value  Request Id. Multiple args allowed.
    --create           Bulk zone create operation.
    --delete           Bulk zone delete operation.
 ```
@@ -819,7 +821,7 @@ An example status check for a request would be as follows:
 
 ```
 $ akamai dns  --edgerc ~/.edgerc --section default status-bulkzones -create -requestid 309679b5-1ab1-4837-9666-0019d1be891e -json
-Preparing bulk zones status request
+Preparing bulk zones status request(s)
 Submitting Bulk Zones request 
 Submitting Bulk Zones request  ... [OK]
 
@@ -827,14 +829,56 @@ Assembling Bulk Zone Response Content
 Assembling Bulk Zone Response Content ... [OK]
 
 
-{
-  "requestId": "309679b5-1ab1-4837-9666-0019d1be891e",
-  "zonesSubmitted": 2,
-  "successCount": 2,
-  "failureCount": 0,
-  "isComplete": true,
-  "expirationDate": "2020-10-26T18:03:21.072004Z"
-}
+[
+    {
+        "requestId": "309679b5-1ab1-4837-9666-0019d1be891e",
+        "zonesSubmitted": 2,
+        "successCount": 2,
+        "failureCount": 0,
+        "isComplete": true,
+        "expirationDate": "2020-10-26T18:03:21.072004Z"
+    }
+]
+```
+
+An example status check for multiple request ids would be as follows:
+
+```
+$ akamai dns  --edgerc ~/.edgerc --section default status-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
+Preparing bulk zones status request(s)
+Submitting Bulk Zones request
+Submitting Bulk Zones request  ... [OK]
+
+Assembling Bulk Zone Response Content
+Assembling Bulk Zone Response Content ... [OK]
+
+
+
+Bulk Zones Request Status
+
+  Request Id   15bc138f-8d82-451b-80b7-a56b88ffc474
+
+               Zones Submitted                        2
+
+               Success Count                          0
+
+               Failure Count                          2
+
+               Complete                               true
+
+               Expiration Date                        2020-10-28T17:10:04.515792Z
+
+ Request Id   0c22641b-7a30-44be-8fdd-092bf875f3bc
+
+               Zones Submitted                        2
+
+               Success Count                          0
+
+               Failure Count                          2
+
+               Complete                               true
+
+               Expiration Date                        2020-10-28T17:10:05.613474Z
 ```
 
 ### Get Bulk Zone Request Result
@@ -849,7 +893,7 @@ $ akamai dns status-bulkzones  [--json] [--output] [--create] [--delete] [--requ
 Flags:
    --json             Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --output FILE      Output command results to FILE
-   --requestid value  Request Id
+   --requestid value  Request Id. Multiple args allowed.
    --create           Bulk zone create operation.
    --delete           Bulk zone delete operation.
 
@@ -859,7 +903,7 @@ An example result retrieval for a request would be as follows:
 
 ```
 $ akamai dns  --edgerc ~/.edgerc --section default result-bulkzones -delete -requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 -json
-Preparing bulk zones result request
+Preparing bulk zones result request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
 
@@ -867,14 +911,52 @@ Assembling Bulk Zone Response Content
 Assembling Bulk Zone Response Content ... [OK]
 
 
-{
-  "requestId": "f3fcbf11-1b03-420e-9e2b-88cd0096fa62",
-  "successfullyDeletedZones": [
-    "one.xxx_testbulk.net",
-    "two.xxx_testbulk.net"
-  ],
-  "FailedZones": []
-}
+[
+    {
+        "requestId": "f3fcbf11-1b03-420e-9e2b-88cd0096fa62",
+        "successfullyDeletedZones": [
+            "one.xxx_testbulk.net",
+            "two.xxx_testbulk.net"
+        ],
+        "FailedZones": []
+    }
+]
+```
+
+An example result retrieval for multiple request ids would be as follows:
+
+```
+$ akamai dns  --edgerc ~/.edgerc --section default result-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
+Preparing bulk zones result request(s)
+Submitting Bulk Zones request
+Submitting Bulk Zones request  ... [OK]
+
+Assembling Bulk Zone Response Content
+Assembling Bulk Zone Response Content ... [OK]
+
+
+[
+  {
+    "requestId": "15bc138f-8d82-451b-80b7-a56b88ffc474",
+    "successfullyCreatedZones": [],
+    "FailedZones": [
+      {
+        "zone": "one.xxx_testbulk.net",
+        "failureReason": "ZONE_ALREADY_EXISTS"
+      }
+    ]
+  },
+  {
+    "requestId": "0c22641b-7a30-44be-8fdd-092bf875f3bc",
+    "successfullyCreatedZones": [],
+    "FailedZones": [
+      {
+        "zone": "two.xxx_testbulk.net",
+        "failureReason": "ZONE_ALREADY_EXISTS"
+      }
+    ]
+  }
+]
 ```
 
 ### Retrieving a Zone
