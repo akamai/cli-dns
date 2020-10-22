@@ -28,6 +28,41 @@ import (
 	"github.com/urfave/cli"
 )
 
+// Temporary... Typo in dns library
+type BulkCreateResultResponse struct {
+	RequestId                string                  `json:"requestId"`
+	SuccessfullyCreatedZones []string                `json:"successfullyCreatedZones"`
+	FailedZones              []*dnsv2.BulkFailedZone `json:"failedZones"`
+}
+
+type BulkDeleteResultResponse struct {
+	RequestId                string                  `json:"requestId"`
+	SuccessfullyDeletedZones []string                `json:"successfullyDeletedZones"`
+	FailedZones              []*dnsv2.BulkFailedZone `json:"failedZones"`
+}
+
+func convertBulkCreateResultResponse(resp *dnsv2.BulkCreateResultResponse) *BulkCreateResultResponse {
+
+	res := &BulkCreateResultResponse{}
+	res.RequestId = resp.RequestId
+	res.SuccessfullyCreatedZones = resp.SuccessfullyCreatedZones
+	res.FailedZones = resp.FailedZones
+
+	return res
+}
+
+func convertBulkDeleteResultResponse(resp *dnsv2.BulkDeleteResultResponse) *BulkDeleteResultResponse {
+
+	res := &BulkDeleteResultResponse{}
+	res.RequestId = resp.RequestId
+	res.SuccessfullyDeletedZones = resp.SuccessfullyDeletedZones
+	res.FailedZones = resp.FailedZones
+
+	return res
+}
+
+// end temp
+
 func cmdResultBulkZones(c *cli.Context) error {
 	config, err := akamai.GetEdgegridConfig(c)
 	if err != nil {
@@ -63,8 +98,8 @@ func cmdResultBulkZones(c *cli.Context) error {
 	akamai.StartSpinner("Submitting Bulk Zones request  ", "")
 	//  Submit
 	var resultResp interface{}
-	resultRespCreateList := make([]*dnsv2.BulkCreateResultResponse, 0)
-	resultRespDeleteList := make([]*dnsv2.BulkDeleteResultResponse, 0)
+	resultRespCreateList := make([]*BulkCreateResultResponse, 0)
+	resultRespDeleteList := make([]*BulkDeleteResultResponse, 0)
 	for _, requestid := range requestids {
 		if op == "create" {
 			resultResp, err = dnsv2.GetBulkZoneCreateResult(requestid)
@@ -72,14 +107,14 @@ func cmdResultBulkZones(c *cli.Context) error {
 				akamai.StopSpinnerFail()
 				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request Result Query failedd. Error: %s", err.Error())), 1)
 			}
-			resultRespCreateList = append(resultRespCreateList, resultResp.(*dnsv2.BulkCreateResultResponse))
+			resultRespCreateList = append(resultRespCreateList, convertBulkCreateResultResponse(resultResp.(*dnsv2.BulkCreateResultResponse)))
 		} else {
 			resultResp, err = dnsv2.GetBulkZoneDeleteResult(requestid)
 			if err != nil {
 				akamai.StopSpinnerFail()
 				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request Result Query failedd. Error: %s", err.Error())), 1)
 			}
-			resultRespDeleteList = append(resultRespDeleteList, resultResp.(*dnsv2.BulkDeleteResultResponse))
+			resultRespDeleteList = append(resultRespDeleteList, convertBulkDeleteResultResponse(resultResp.(*dnsv2.BulkDeleteResultResponse)))
 		}
 	}
 	akamai.StopSpinnerOk()
@@ -159,7 +194,7 @@ func renderBulkZonesResultTable(resultRespList interface{}, c *cli.Context) stri
 	table.SetRowSeparator(" ")
 	table.SetBorder(false)
 
-	if resultList, ok := resultRespList.([]*dnsv2.BulkCreateResultResponse); ok {
+	if resultList, ok := resultRespList.([]*BulkCreateResultResponse); ok {
 		for _, crreq := range resultList {
 			requestid = crreq.RequestId
 			succzones = crreq.SuccessfullyCreatedZones
@@ -187,7 +222,7 @@ func renderBulkZonesResultTable(resultRespList interface{}, c *cli.Context) stri
 
 		return outString
 	}
-	resultList, ok := resultRespList.([]*dnsv2.BulkDeleteResultResponse)
+	resultList, ok := resultRespList.([]*BulkDeleteResultResponse)
 	if !ok {
 		return "Unable to create result table"
 	}

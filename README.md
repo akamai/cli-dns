@@ -25,7 +25,7 @@ for your system, or by cloning this repository and compiling it yourself.
 
 ### Compiling from Source
 
-If you want to compile the package from source, you will need Go 1.12 or later installed:
+If you want to compile the package from source, you will need Go 1.14 or later installed:
 
 1. Fetch the package:  
   `go get github.com/akamai/cli-dns`
@@ -652,7 +652,7 @@ resulting in ./recordset_a.json would containing:
 
 ### Creating a Recordset
 
-The command `akamai dns create-recordset` is used to create a single recordset. fields and values can be provided on the command line or input file.
+The command `akamai dns create-recordset` is used to create a single recordset. Fields and values can be provided on the command line or input file.
 
 The complete command line is:
 
@@ -691,7 +691,7 @@ and result in the following output:
 
 ### Updating a Recordset
 
-The command `akamai dns update-recordset` is used to update a single existing recordset. fields and values can be provided on the command line or input file.
+The command `akamai dns update-recordset` is used to update a single existing recordset. Fields and values can be provided on the command line or input file.
 
 The complete command line is:
 
@@ -969,7 +969,7 @@ Assembling Bulk Zone Response Content ... [OK]
             "one.xxx_testbulk.net",
             "two.xxx_testbulk.net"
         ],
-        "FailedZones": []
+        "failedZones": []
     }
 ]
 ```
@@ -990,7 +990,7 @@ Assembling Bulk Zone Response Content ... [OK]
   {
     "requestId": "15bc138f-8d82-451b-80b7-a56b88ffc474",
     "successfullyCreatedZones": [],
-    "FailedZones": [
+    "failedZones": [
       {
         "zone": "one.xxx_testbulk.net",
         "failureReason": "ZONE_ALREADY_EXISTS"
@@ -1000,7 +1000,7 @@ Assembling Bulk Zone Response Content ... [OK]
   {
     "requestId": "0c22641b-7a30-44be-8fdd-092bf875f3bc",
     "successfullyCreatedZones": [],
-    "FailedZones": [
+    "failedZones": [
       {
         "zone": "two.xxx_testbulk.net",
         "failureReason": "ZONE_ALREADY_EXISTS"
