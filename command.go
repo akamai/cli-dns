@@ -231,7 +231,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 	addRecordCmd := cli.Command{
 		Name:        "add-record",
 		ArgsUsage:   "<record type> <hostname>",
-		Description: "Add a new record to the zone",
+		Description: "DEPRECATED. Add a new record to the zone. See Readme for more information.",
 		HideHelp:    true,
 		Action: func(c *cli.Context) error {
 			if recordType := c.Args().First(); recordType == "" {
@@ -246,7 +246,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 	rmRecordCmd := cli.Command{
 		Name:        "rm-record",
 		ArgsUsage:   "<record type> <hostname>",
-		Description: "Remove a record from the zone",
+		Description: "DEPRECATED. Remove a record from the zone. See Readme for more information.",
 		HideHelp:    true,
 		Action: func(c *cli.Context) error {
 			if recordType := c.Args().First(); recordType == "" {
@@ -262,7 +262,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		addCmd := cli.Command{
 			Name:         recordType,
 			ArgsUsage:    "<hostname>",
-			Description:  fmt.Sprintf("Add a new %s record to the zone", recordType),
+			Description:  fmt.Sprintf("DEPRECATED. Add a new %s record to the zone", recordType),
 			Action:       cmdCreateRecord,
 			HideHelp:     true,
 			BashComplete: akamai.DefaultAutoComplete,
@@ -271,7 +271,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		rmCmd := cli.Command{
 			Name:         recordType,
 			ArgsUsage:    "<hostname>",
-			Description:  fmt.Sprintf("Remove a %s record from the zone", recordType),
+			Description:  fmt.Sprintf("DEPRECATED. Remove a %s record from the zone", recordType),
 			Action:       cmdRmRecord,
 			HideHelp:     true,
 			BashComplete: akamai.DefaultAutoComplete,
@@ -523,7 +523,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 	// V1 Zone
 	commands = append(commands, cli.Command{
 		Name:        "retrieve-zone",
-		Description: "Fetch and display a zone",
+		Description: "DEPRECATED. Fetch and display a zone. See Readme for more information.",
 		ArgsUsage:   "<hostname>",
 		Action:      cmdRetrieveZone,
 		Flags: append(baseCmdFlags, []cli.Flag{
@@ -546,7 +546,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 
 	commands = append(commands, cli.Command{
 		Name:        "update-zone",
-		Description: "Update a zone",
+		Description: "DEPRECATED. Update a zone. See Readme for more information.",
 		ArgsUsage:   "<hostname>",
 		Action:      cmdUpdateZone,
 		Flags: append(baseCmdFlags, []cli.Flag{
