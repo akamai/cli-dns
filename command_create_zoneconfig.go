@@ -258,14 +258,16 @@ func renderZoneconfigTable(zone *dnsv2.ZoneResponse, c *cli.Context) string {
 				masters := strings.Join(zone.Masters, " ,")
 				table.Append([]string{" ", "Masters", masters})
 			}
-			if len(zone.TsigKey.Name) > 0 {
-				table.Append([]string{" ", "TsigKey:Name", zone.TsigKey.Name})
-			}
-			if len(zone.TsigKey.Algorithm) > 0 {
-				table.Append([]string{" ", "TsigKey:Algorithm", zone.TsigKey.Algorithm})
-			}
-			if len(zone.TsigKey.Secret) > 0 {
-				table.Append([]string{" ", "TsigKey:Secret", zone.TsigKey.Secret})
+			if zone.TsigKey != nil {
+				if len(zone.TsigKey.Name) > 0 {
+					table.Append([]string{" ", "TsigKey:Name", zone.TsigKey.Name})
+				}
+				if len(zone.TsigKey.Algorithm) > 0 {
+					table.Append([]string{" ", "TsigKey:Algorithm", zone.TsigKey.Algorithm})
+				}
+				if len(zone.TsigKey.Secret) > 0 {
+					table.Append([]string{" ", "TsigKey:Secret", zone.TsigKey.Secret})
+				}
 			}
 		}
 		if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
