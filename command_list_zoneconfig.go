@@ -197,9 +197,11 @@ func renderZoneListTable(zones []*dnsv2.ZoneResponse, c *cli.Context) string {
 					masters := strings.Join(zone.Masters, " ,")
 					table.Append([]string{" ", "Masters", masters})
 				}
-				table.Append([]string{" ", "TsigKey:Name", zone.TsigKey.Name})
-				table.Append([]string{" ", "TsigKey:Algorithm", zone.TsigKey.Algorithm})
-				table.Append([]string{" ", "TsigKey:Secret", zone.TsigKey.Secret})
+				if zone.TsigKey != nil {
+					table.Append([]string{" ", "TsigKey:Name", zone.TsigKey.Name})
+					table.Append([]string{" ", "TsigKey:Algorithm", zone.TsigKey.Algorithm})
+					table.Append([]string{" ", "TsigKey:Secret", zone.TsigKey.Secret})
+				}
 			}
 			if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
 				table.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
