@@ -69,8 +69,8 @@ $  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
 ## Built-In Commands
 
 ```
-  add-record
-  rm-record
+  add-record [Deprecated]
+  rm-record [Deprecated]
   list-recordsets
   create-recordsets
   update-recordsets
@@ -78,8 +78,8 @@ $  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
   create-recordset
   update-recordset
   delete-recordset
-  retrieve-zone
-  update-zone
+  retrieve-zone [Deprecated]
+  update-zone [Deprecated]
   list-zoneconfig
   create-zoneconfig
   retrieve-zoneconfig
@@ -98,6 +98,8 @@ Commands are grouped into several categories.
 *-bulkzones commands provide the ability to submit and monitor bulk zone operations.
 
 *-zone and *-record commands provide a more constrained scope of control, treating the zone and records as a single entity. These commands provide backward compatibility with earlier releases of the package.
+
+NOTE: The *-zone and *-record commands utilize and older version of the Edge DNS API and do not support zones with newer record types. These commands have been deprecated and will be removed from a future release.
 
 ### Listing Zone Configurations
 
@@ -1010,6 +1012,8 @@ Assembling Bulk Zone Response Content ... [OK]
 
 ### Retrieving a Zone
 
+NOTE: This sub command has been deprecated and will be removed in a future release.
+
 To retrieve a Zone use the `retrieve-zone` command:
 
 ```
@@ -1055,6 +1059,8 @@ $ akamai dns retrieve-zone example.org --filter A --filter AAAA --json
 
 ### Update a Zone
 
+NOTE: This sub command has been deprecated and will be removed in a future release.
+
 Update a zone using `akamai dns update-zone`. This command allows you to input either
 a [Edge DNS JSON payload](https://developer.akamai.com/api/luna/config-dns/resources.html#addormodifyazone), or a standard DNS zone file.
 
@@ -1090,17 +1096,22 @@ $ akamai dns update-zone example.org --overwrite -f example.org.zone.json
 
 To add a new DNS record use `akamai dns add-record <record type>`. Each setting for the record is a flag, for example to add a `CNAME` record:
 
+NOTE: This sub command has been deprecated and will be removed in a future release.
+
 ```
 $ akamai dns add-record CNAME example.org --name www --target example.org --ttl 3600
 ```
 
 ### Remove a Record
 
+NOTE: This sub command has been deprecated and will be removed in a future release.
+
 Use `akamai dns rm-record <record type>` to remove one or more records matching the given flags.
 
 ```
 $ akamai dns rm-record A example.org --name www
 ```
+
 
 By default the command will ask you to verify which records to remove if more than one matches the given criteria. You can force it to remove all matching records by passing in the `--force-multiple` flag.
 
