@@ -765,7 +765,7 @@ Flags:
    --file FILE         Read JSON formatted input from FILE
 ```
 
-NOTE: The CLI currently limits the number of zones in a submit request to 1000. If an invocation presents more than 1000 zones, the zones will be submitted in batches of 1000 and multiple Request Ids will be returned.
+NOTE: The CLI currently limits the number of zones in a submit request to 1000. If an invocation presents more than 1000 zones, the zones will be submitted in batches of 1000 and multiple Request Ids will be returned. The batch size can be changed by setting the environment variable AKAMAI_ZONES_BATCH_SIZE.
 
 An example create submit request  would be as follows:
 

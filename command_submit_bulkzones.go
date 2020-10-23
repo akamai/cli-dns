@@ -107,6 +107,17 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		outputPath = c.String("output")
 		outputPath = filepath.FromSlash(outputPath)
 	}
+
+	val, ok := os.LookupEnv("AKAMAI_ZONES_BATCH_SIZE")
+	if ok {
+		batchsize, err := strconv.Atoi(val)
+		if err != nil {
+	                akamai.StopSpinnerFail()
+        	        return cli.NewExitError(color.RedString(" Environ variable AKAMAI_ZONEBATCH has invalid value"), 1)
+        	}
+		maxNumZones = batchsize
+	}
+ 
 	// Read in json file
 	data, err := ioutil.ReadFile(inputPath)
 	if err != nil {
