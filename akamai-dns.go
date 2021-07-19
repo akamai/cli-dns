@@ -29,7 +29,7 @@ func main() {
 		"A CLI for Edge DNS",
 		"Manage DNS Zones with Edge DNS",
 		VERSION,
-		"dns",
+		"default",
 		commandLocator,
 	)
 

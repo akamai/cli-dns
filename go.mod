@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.0.0
-	github.com/akamai/cli-common-golang v0.0.0-20200508194158-7dad60634830
+	github.com/akamai/cli-common-golang v0.0.0-20210716202303-5a2a24172430
 	github.com/briandowns/spinner v1.11.1 // indirect
 	github.com/dshafik/gozone v0.0.0-20180309042724-80dfb510e448
 	github.com/fatih/color v1.7.0
