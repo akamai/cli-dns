@@ -25,18 +25,16 @@ for your system, or by cloning this repository and compiling it yourself.
 
 ### Compiling from Source
 
-If you want to compile the package from source, you will need Go 1.14 or later installed:
+If you want to compile the package from source, you will need Go 1.18 or later installed:
 
 1. Fetch the package:  
   `go get github.com/akamai/cli-dns`
-2. Change to the package directory:  
-  `cd $GOPATH/src/github.com/akamai/cli-dns`
-3. Install dependencies:  
+2. Install dependencies:  
   `go mod vendor`
-4. Compile the binary:
+3. Change to the package directory and compile the binary::
   - Linux/macOS/*nix: `go build -mod=vendor -o akamai-dns`
   - Windows: `go build -mod=vendor -o akamai-dns.exe`
-5. Move the binary (`akamai-dns` or `akamai-dns.exe`) in to your `PATH`
+1. Move the binary (`akamai-dns` or `akamai-dns.exe`) in to your `PATH`
 
 ## Command Summary
 
