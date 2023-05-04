@@ -32,7 +32,6 @@ If you want to compile the package from source, you will need Go 1.18 or later i
 2. Change to the package directory and compile the binary::
   - Linux/macOS/*nix: `go build -o akamai-dns`
   - Windows: `go build -o akamai-dns.exe`
-3. Move the binary (`akamai-dns` or `akamai-dns.exe`) in to your `PATH`
 
 ## Command Summary
 
