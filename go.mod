@@ -10,6 +10,7 @@ require (
 	github.com/mattn/go-isatty v0.0.11
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/urfave/cli v1.22.0
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 )
 
 require (
