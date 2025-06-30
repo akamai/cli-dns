@@ -254,6 +254,56 @@ func GetCommands() []cli.Command {
 	)
 
 	commands = append(commands, cli.Command{
+		Name:        "retrieve-zone",
+		Description: "Retrieve a zone's configuration and records",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdRetrieveZone,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "json",
+				Usage: "Output zone in JSON format",
+			},
+			cli.StringSliceFlag{
+				Name:  "filter",
+				Usage: "Filter by record type",
+			},
+		},
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "update-zone",
+		Description: "Update a zone using either a recordsets JSON file or a DNS master zone file",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdUpdateZone,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "file, f",
+				Usage: "Path to input file (JSON for recordsets or DNS master file)",
+			},
+			cli.BoolFlag{
+				Name:  "dns",
+				Usage: "Use this flag if input file is a DNS master zone file",
+			},
+			cli.StringFlag{
+				Name:  "output, o",
+				Usage: "Optional output path for updated zone details",
+			},
+			cli.BoolFlag{
+				Name:  "overwrite",
+				Usage: "Overwrite all recordsets instead of merging with existing",
+			},
+			cli.BoolFlag{
+				Name:  "json",
+				Usage: "Output zone response in JSON format",
+			},
+			cli.BoolFlag{
+				Name:  "suppress",
+				Usage: "Suppress output to console",
+			},
+		},
+	})
+
+	commands = append(commands, cli.Command{
 		Name:        "list-recordsets",
 		Description: "Retreive list of zone Recordsets",
 		ArgsUsage:   "<zonename>",
@@ -368,6 +418,44 @@ func GetCommands() []cli.Command {
 		Description: "Delete recordset",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdDeleteRecordset,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "Recordset `NAME`",
+			},
+			cli.StringFlag{
+				Name:  "type",
+				Usage: "Recordset `TYPE`",
+			},
+		},
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "add-recordset",
+		Description: "Create a new recordset",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdAddRecord,
+		Flags: append(baseSetCmdFlags,
+			cli.IntFlag{
+				Name:  "ttl",
+				Usage: "Recordset `TTL`",
+			},
+			cli.StringSliceFlag{
+				Name:  "rdata",
+				Usage: "Recordset `RDATA`. Multiple flags allowed.",
+			},
+			cli.StringFlag{
+				Name:  "file",
+				Usage: "`FILE` path to JSON formatted recordset content",
+			},
+		),
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "rm-record",
+		Description: "Delete recordset",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdRmRecord,
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "name",

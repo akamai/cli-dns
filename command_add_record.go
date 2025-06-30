@@ -14,269 +14,155 @@
 
 package main
 
-/*import (
+import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/akamai/cli-dns/edgegrid"
+
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
-	akamai "github.com/akamai/cli-common-golang"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
-func cmdCreateRecord(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+func cmdAddRecord(c *cli.Context) error {
+
+	if c.NArg() == 0 {
+		cli.ShowCommandHelp(c, c.Command.Name)
+		return cli.NewExitError(color.RedString("zonename is required"), 1)
+	}
+
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dns.Config = config
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
-	hostname := c.Args().First()
-	if hostname == "" {
-		return cli.NewExitError(color.RedString("hostname is required"), 1)
-	}
-
-	err = validateFields(c.Command.Name, c)
-	if err != nil {
-		return err
-	}
-
-	akamai.StartSpinner(
-		fmt.Sprintf("Adding new %s record...", c.Command.Name),
-		fmt.Sprintf("Adding new %s record...... [%s]", c.Command.Name, color.GreenString("OK")),
+	var (
+		zonename   string
+		outputPath string
+		inputPath  string
+		// json
+		// suppress
 	)
-	zone, err := dns.GetZone(hostname)
+
+	zonename = c.Args().First()
+
+	if c.IsSet("file") {
+		inputPath = c.String("file")
+		inputPath = filepath.FromSlash(inputPath)
+	}
+	if c.IsSet("output") {
+		outputPath = c.String("output")
+		outputPath = filepath.FromSlash(outputPath)
+	}
+	fmt.Println("Preparing recordset ", "")
+
+	// Single recordset ops use RecordBody as return Object
+	newrecord := &dns.RecordBody{}
+
+	if c.IsSet("file") {
+		// Read in json file
+		data, err := os.ReadFile(filepath.FromSlash(inputPath))
+		if err != nil {
+			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
+		}
+		recordset := &dns.RecordSet{}
+		// set local variables and Object
+		err = json.Unmarshal(data, recordset)
+		if err != nil {
+			return cli.NewExitError(color.RedString("Failed to parse json file content into recordset"), 1)
+		}
+		newrecord.Name = recordset.Name
+		newrecord.RecordType = recordset.Type
+		newrecord.TTL = recordset.TTL
+		newrecord.Target = recordset.Rdata
+	} else if c.IsSet("type") {
+		if !c.IsSet("name") || !c.IsSet("ttl") || !c.IsSet("rdata") {
+			cli.ShowCommandHelp(c, c.Command.Name)
+			return cli.NewExitError(color.RedString("Field flags missing for recordset creation"), 1)
+		}
+		newrecord.RecordType = strings.ToUpper(c.String("type"))
+		newrecord.Name = c.String("name")
+		newrecord.TTL = c.Int("ttl")
+		newrecord.Target = c.StringSlice("rdata")
+	} else {
+		cli.ShowCommandHelp(c, c.Command.Name)
+		return cli.NewExitError(color.RedString("Recordset field values or input file are required"), 1)
+	}
+	// See if already exists
+	existing, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       zonename,
+		RecordType: newrecord.RecordType,
+		Name:       newrecord.Name,
+	}) // returns RecordBody!
+	if err == nil && existing.RecordType != "" {
+		return cli.NewExitError(color.RedString("Recordset already exists"), 1)
+	} /*else {
+		if !dns.ConfigDNSError() || !err.(dns.ConfigDNSError).NotFound() {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure while checking recordset existance. Error: %s", err.Error())), 1)
+		}
+	}*/
+
+	fmt.Println("Creating Recordset  ", "")
+	err = dnsClient.CreateRecord(ctx, dns.CreateRecordRequest{Zone: zonename, Record: newrecord})
 	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError("Unable to fetch zone", 1)
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset create failed. Error: %s", err)), 1)
 	}
 
-	var active bool
-	if !c.IsSet("inactive") {
-		active = true
-	}
-
-	var record dns.DNSRecord
-
-	switch c.Command.Name {
-	case "A":
-		record = dns.NewARecord()
-		record.(*dns.ARecord).Active = active
-		record.(*dns.ARecord).Name = c.String("name")
-		record.(*dns.ARecord).Target = c.String("target")
-		record.(*dns.ARecord).TTL = c.Int("ttl")
-	case "AAAA":
-		record = dns.NewAaaaRecord()
-		record.(*dns.AaaaRecord).Active = active
-		record.(*dns.AaaaRecord).Name = c.String("name")
-		record.(*dns.AaaaRecord).Target = c.String("target")
-		record.(*dns.AaaaRecord).TTL = c.Int("ttl")
-	case "AFSDB":
-		record = dns.NewAfsdbRecord()
-		record.(*dns.AfsdbRecord).Active = active
-		record.(*dns.AfsdbRecord).Name = c.String("name")
-		record.(*dns.AfsdbRecord).Subtype = c.Int("subtype")
-		record.(*dns.AfsdbRecord).Target = c.String("target")
-		record.(*dns.AfsdbRecord).TTL = c.Int("ttl")
-	case "CNAME":
-		record = dns.NewCnameRecord()
-		record.(*dns.CnameRecord).Active = active
-		record.(*dns.CnameRecord).Name = c.String("name")
-		record.(*dns.CnameRecord).Target = c.String("target")
-		record.(*dns.CnameRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.CnameRecord).Target += "."
-		}
-	case "DNSKEY":
-		record = dns.NewDnskeyRecord()
-		record.(*dns.DnskeyRecord).Active = active
-		record.(*dns.DnskeyRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.DnskeyRecord).Flags = c.Int("flags")
-		record.(*dns.DnskeyRecord).Key = c.String("key")
-		record.(*dns.DnskeyRecord).Name = c.String("name")
-		record.(*dns.DnskeyRecord).Protocol = c.Int("protocol")
-		record.(*dns.DnskeyRecord).TTL = c.Int("ttl")
-	case "DS":
-		record = dns.NewDsRecord()
-		record.(*dns.DsRecord).Active = active
-		record.(*dns.DsRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.DsRecord).Digest = c.String("digest")
-		record.(*dns.DsRecord).DigestType = c.Int("digest-type")
-		record.(*dns.DsRecord).Keytag = c.Int("keytag")
-		record.(*dns.DsRecord).Name = c.String("name")
-		record.(*dns.DsRecord).TTL = c.Int("ttl")
-	case "HINFO":
-		record = dns.NewHinfoRecord()
-		record.(*dns.HinfoRecord).Active = active
-		record.(*dns.HinfoRecord).Hardware = c.String("hardware")
-		record.(*dns.HinfoRecord).Name = c.String("name")
-		record.(*dns.HinfoRecord).Software = c.String("software")
-		record.(*dns.HinfoRecord).TTL = c.Int("ttl")
-	case "LOC":
-		record = dns.NewLocRecord()
-		record.(*dns.LocRecord).Active = active
-		record.(*dns.LocRecord).Name = c.String("name")
-		record.(*dns.LocRecord).Target = c.String("target")
-		record.(*dns.LocRecord).TTL = c.Int("ttl")
-	case "MX":
-		record = dns.NewMxRecord()
-		record.(*dns.MxRecord).Active = active
-		record.(*dns.MxRecord).Name = c.String("name")
-		record.(*dns.MxRecord).Priority = c.Int("priority")
-		record.(*dns.MxRecord).Target = c.String("target")
-		record.(*dns.MxRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.MxRecord).Target += "."
-		}
-	case "NAPTR":
-		record = dns.NewNaptrRecord()
-		record.(*dns.NaptrRecord).Active = active
-		record.(*dns.NaptrRecord).Flags = c.String("flags")
-		record.(*dns.NaptrRecord).Name = c.String("name")
-		record.(*dns.NaptrRecord).Order = uint16(c.Uint("order"))
-		record.(*dns.NaptrRecord).Preference = uint16(c.Uint("preference"))
-		record.(*dns.NaptrRecord).Regexp = c.String("regexp")
-		record.(*dns.NaptrRecord).Replacement = c.String("replacement")
-		record.(*dns.NaptrRecord).Service = c.String("service")
-		record.(*dns.NaptrRecord).TTL = c.Int("ttl")
-	case "NS":
-		record = dns.NewNsRecord()
-		record.(*dns.NsRecord).Active = active
-		record.(*dns.NsRecord).Name = c.String("name")
-		record.(*dns.NsRecord).Target = c.String("target")
-		record.(*dns.NsRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.NsRecord).Target += "."
-		}
-	case "NSEC3":
-		record = dns.NewNsec3Record()
-		record.(*dns.Nsec3Record).Active = active
-		record.(*dns.Nsec3Record).Algorithm = c.Int("algorithm")
-		record.(*dns.Nsec3Record).Flags = c.Int("flags")
-		record.(*dns.Nsec3Record).Iterations = c.Int("iterations")
-		record.(*dns.Nsec3Record).Name = c.String("name")
-		record.(*dns.Nsec3Record).NextHashedOwnerName = c.String("next-hashed-owner-name")
-		record.(*dns.Nsec3Record).Salt = c.String("salt")
-		record.(*dns.Nsec3Record).TTL = c.Int("ttl")
-		record.(*dns.Nsec3Record).TypeBitmaps = c.String("type-bitmaps")
-	case "NSEC3PARAM":
-		record = dns.NewNsec3paramRecord()
-		record.(*dns.Nsec3paramRecord).Active = active
-		record.(*dns.Nsec3paramRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.Nsec3paramRecord).Flags = c.Int("flags")
-		record.(*dns.Nsec3paramRecord).Iterations = c.Int("iterations")
-		record.(*dns.Nsec3paramRecord).Name = c.String("name")
-		record.(*dns.Nsec3paramRecord).Salt = c.String("salt")
-		record.(*dns.Nsec3paramRecord).TTL = c.Int("ttl")
-	case "PTR":
-		record = dns.NewPtrRecord()
-		record.(*dns.PtrRecord).Active = active
-		record.(*dns.PtrRecord).Name = c.String("name")
-		record.(*dns.PtrRecord).Target = c.String("target")
-		record.(*dns.PtrRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.PtrRecord).Target += "."
-		}
-	case "RP":
-		record = dns.NewRpRecord()
-		record.(*dns.RpRecord).Active = active
-		record.(*dns.RpRecord).Mailbox = c.String("mailbot")
-		record.(*dns.RpRecord).Name = c.String("name")
-		record.(*dns.RpRecord).TTL = c.Int("ttl")
-		record.(*dns.RpRecord).Txt = c.String("txt")
-	case "RRSIG":
-		record = dns.NewRrsigRecord()
-		record.(*dns.RrsigRecord).Active = active
-		record.(*dns.RrsigRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.RrsigRecord).Expiration = c.String("expiration")
-		record.(*dns.RrsigRecord).Inception = c.String("inception")
-		record.(*dns.RrsigRecord).Keytag = c.Int("keytag")
-		record.(*dns.RrsigRecord).Labels = c.Int("labels")
-		record.(*dns.RrsigRecord).Name = c.String("name")
-		record.(*dns.RrsigRecord).OriginalTTL = c.Int("original-ttl")
-		record.(*dns.RrsigRecord).Signature = c.String("signature")
-		record.(*dns.RrsigRecord).Signer = c.String("signer")
-		record.(*dns.RrsigRecord).TTL = c.Int("ttl")
-		record.(*dns.RrsigRecord).TypeCovered = c.String("type-covered")
-	case "SOA":
-		record = dns.NewSoaRecord()
-		record.(*dns.SoaRecord).Contact = c.String("contact")
-		record.(*dns.SoaRecord).Expire = c.Int("expire")
-		record.(*dns.SoaRecord).Minimum = c.Uint("minimum")
-		record.(*dns.SoaRecord).Originserver = c.String("originserver")
-		record.(*dns.SoaRecord).Refresh = c.Int("refresh")
-		record.(*dns.SoaRecord).Retry = c.Int("retry")
-		record.(*dns.SoaRecord).Serial = c.Uint("serial")
-		record.(*dns.SoaRecord).TTL = c.Int("ttl")
-	case "SPF":
-		record = dns.NewSpfRecord()
-		record.(*dns.SpfRecord).Active = active
-		record.(*dns.SpfRecord).Name = c.String("name")
-		record.(*dns.SpfRecord).Target = c.String("target")
-		record.(*dns.SpfRecord).TTL = c.Int("ttl")
-	case "SRV":
-		record = dns.NewSrvRecord()
-		record.(*dns.SrvRecord).Active = active
-		record.(*dns.SrvRecord).Name = c.String("name")
-		record.(*dns.SrvRecord).Port = uint16(c.Uint("port"))
-		record.(*dns.SrvRecord).Priority = c.Int("priority")
-		record.(*dns.SrvRecord).Target = c.String("target")
-		record.(*dns.SrvRecord).TTL = c.Int("ttl")
-		record.(*dns.SrvRecord).Weight = uint16(c.Uint("weight"))
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.SrvRecord).Target += "."
-		}
-	case "SSHFP":
-		record = dns.NewSshfpRecord()
-		record.(*dns.SshfpRecord).Active = active
-		record.(*dns.SshfpRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.SshfpRecord).Fingerprint = c.String("fingerprint")
-		record.(*dns.SshfpRecord).FingerprintType = c.Int("fingerprint-type")
-		record.(*dns.SshfpRecord).Name = c.String("name")
-		record.(*dns.SshfpRecord).TTL = c.Int("ttl")
-	case "TXT":
-		record = dns.NewTxtRecord()
-		record.(*dns.TxtRecord).Active = active
-		record.(*dns.TxtRecord).Name = c.String("name")
-		record.(*dns.TxtRecord).Target = c.String("target")
-		record.(*dns.TxtRecord).TTL = c.Int("ttl")
-	}
-
-	zone.AddRecord(record)
-	err = zone.Save()
+	fmt.Println("Verifying Recordset  ", "")
+	record, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{Zone: zonename, RecordType: newrecord.RecordType, Name: newrecord.Name})
 	if err != nil {
-		akamai.StopSpinnerFail()
-		fmt.Printf("%#v\n", err)
-		return cli.NewExitError(err.Error(), 1)
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read recordset content. Error: %s", err.Error())), 1)
+	}
+	// suppress result output?
+	if c.IsSet("suppress") && c.Bool("suppress") {
+		return nil
+	}
+	results := ""
+	fmt.Println("Assembling recordset Content ", "")
+	// full output
+	if c.IsSet("json") && c.Bool("json") {
+		// output as recordset
+		recordset := &dns.RecordSet{}
+		recordset.Name = record.Name
+		recordset.Type = record.RecordType
+		recordset.TTL = record.TTL
+		recordset.Rdata = record.Target
+		zjson, err := json.MarshalIndent(recordset, "", "  ")
+		if err != nil {
+			return cli.NewExitError(color.RedString("Unable to marshal recordset"), 1)
+		}
+		results = string(zjson)
+	} else {
+		results = renderRecordsetTable(zonename, record)
 	}
 
-	akamai.StopSpinnerOk()
+	if len(outputPath) > 1 {
+		fmt.Printf("Writing Output to %s ", outputPath)
+		// pathname and exists?
+		rsHandle, err := os.Create(outputPath)
+		if err != nil {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+		}
+		defer rsHandle.Close()
+		_, err = rsHandle.WriteString(string(results))
+		if err != nil {
+			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
+		}
+		rsHandle.Sync()
+		return nil
+	} else {
+		fmt.Fprintln(c.App.Writer, "")
+		fmt.Fprintln(c.App.Writer, results)
+	}
+
 	return nil
 }
-
-func validateFields(recordType string, c *cli.Context) error {
-	var missing []string = make([]string, 0)
-	for option, settings := range recordOptions[recordType] {
-		if settings.required {
-			if !c.IsSet(option) {
-				missing = append(missing, option)
-			}
-		}
-	}
-
-	if len(missing) != 0 {
-		error := "Missing required options: \n"
-		for _, option := range missing {
-			error += "  " + fmt.Sprintf("--%s", option) + "\n"
-		}
-
-		return cli.NewExitError(error, 1)
-	}
-
-	return nil
-}*/
