@@ -1,0 +1,18 @@
+ 
+Zone Configuration
+ 
+           ZONE               ATTRIBUTE                      VALUE                  
+                                                                                    
+  testprimaryexample.com   Type               PRIMARY                               
+                                                                                    
+                           ContractId         1-3CV382                              
+                                                                                    
+                           SignAndServe       false                                 
+                                                                                    
+                           ActivationState    NEW                                   
+                                                                                    
+                           LastModifiedDate   2025-06-26T05:17:15.23371Z            
+                                                                                    
+                           VersionId          8a286b77-a190-44e3-8d4e-00965433756d  
+                                                                                    
+

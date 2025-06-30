@@ -14,24 +14,7 @@
 
 package main
 
-import (
-	"bufio"
-	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-	"strconv"
-	"strings"
-
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v1"
-	akamai "github.com/akamai/cli-common-golang"
-	"github.com/dshafik/gozone"
-	"github.com/fatih/color"
-	"github.com/urfave/cli"
-)
-
-func cmdUpdateZone(c *cli.Context) error {
+/*func cmdUpdateZone(c *cli.Context) error {
 	config, err := akamai.GetEdgegridConfig(c)
 	if err != nil {
 		return err
@@ -451,4 +434,4 @@ func cmdUpdateZone(c *cli.Context) error {
 	akamai.StopSpinnerOk()
 
 	return nil
-}
+}*/

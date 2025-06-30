@@ -14,20 +14,7 @@
 
 package main
 
-import (
-	"fmt"
-	"os"
-	"strconv"
-	"strings"
-
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v1"
-	akamai "github.com/akamai/cli-common-golang"
-	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli"
-)
-
-func cmdRmRecord(c *cli.Context) error {
+/*func cmdRmRecord(c *cli.Context) error {
 	config, err := akamai.GetEdgegridConfig(c)
 	if err != nil {
 		return err
@@ -199,4 +186,4 @@ func cmdRmRecord(c *cli.Context) error {
 	}
 
 	return nil
-}
+}*/

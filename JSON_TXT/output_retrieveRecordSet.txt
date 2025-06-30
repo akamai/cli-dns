@@ -1,0 +1,8 @@
+{
+ "name": "www.akarnai.com",
+ "type": "CNAME",
+ "ttl": 180,
+ "rdata": [
+  "www.akamai.com."
+ ]
+}

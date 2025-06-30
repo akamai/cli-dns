@@ -14,11 +14,11 @@
 
 package main
 
-import (
+/*import (
 	"fmt"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v1"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	akamai "github.com/akamai/cli-common-golang"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -279,4 +279,4 @@ func validateFields(recordType string, c *cli.Context) error {
 	}
 
 	return nil
-}
+}*/

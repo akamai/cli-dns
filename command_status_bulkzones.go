@@ -15,26 +15,28 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/cli-dns/edgegrid"
+
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
 
 func cmdStatusBulkZones(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dnsv2.Init(config)
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	var (
 		outputPath string
@@ -47,10 +49,9 @@ func cmdStatusBulkZones(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("requestid(s) required. "), 1)
 	}
 
-	akamai.StartSpinner("Preparing bulk zones status request ", "")
+	fmt.Println("Preparing bulk zones status request ", "")
 
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
 	}
 	if c.IsSet("delete") {
@@ -61,55 +62,71 @@ func cmdStatusBulkZones(c *cli.Context) error {
 		outputPath = filepath.FromSlash(outputPath)
 	}
 
-	var statusResp *dnsv2.BulkStatusResponse
-	statusRespList := make([]*dnsv2.BulkStatusResponse, 0)
-	akamai.StartSpinner("Submitting Bulk Zones request(s)  ", "")
+	var statusResp *dns.BulkStatusResponse
+	statusRespList := make([]*dns.BulkStatusResponse, 0)
+	fmt.Println("Submitting Bulk Zones request(s)  ", "")
 	for _, requestid := range requestids {
 		//  Submit
 		if op == "create" {
-			statusResp, err = dnsv2.GetBulkZoneCreateStatus(requestid)
+			r, err := dnsClient.GetBulkZoneCreateStatus(ctx, dns.GetBulkZoneCreateStatusRequest{
+				RequestID: requestid,
+			})
+			if err != nil {
+				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Create Status query failed: %s", err)), 1)
+			}
+			statusResp = &dns.BulkStatusResponse{
+				RequestID:      r.RequestID,
+				ZonesSubmitted: r.ZonesSubmitted,
+				SuccessCount:   r.SuccessCount,
+				FailureCount:   r.FailureCount,
+				IsComplete:     r.IsComplete,
+				ExpirationDate: r.ExpirationDate,
+			}
 		} else {
-			statusResp, err = dnsv2.GetBulkZoneDeleteStatus(requestid)
-		}
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request Status Query failedd. Error: %s", err.Error())), 1)
+			r, err := dnsClient.GetBulkZoneDeleteStatus(ctx, dns.GetBulkZoneDeleteStatusRequest{
+				RequestID: requestid,
+			})
+			if err != nil {
+				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Delete Status query failed: %s", err)), 1)
+			}
+			statusResp = &dns.BulkStatusResponse{
+				RequestID:      r.RequestID,
+				ZonesSubmitted: r.ZonesSubmitted,
+				SuccessCount:   r.SuccessCount,
+				FailureCount:   r.FailureCount,
+				IsComplete:     r.IsComplete,
+				ExpirationDate: r.ExpirationDate,
+			}
 		}
 		statusRespList = append(statusRespList, statusResp)
 	}
-	akamai.StopSpinnerOk()
 
 	results := ""
-	akamai.StartSpinner("Assembling Bulk Zone Response Content ", "")
+	fmt.Println("Assembling Bulk Zone Response Content ", "")
 	// full output
 	if c.IsSet("json") && c.Bool("json") {
 		zjson, err := json.MarshalIndent(statusRespList, "", "  ")
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to process status response(s)"), 1)
 		}
 		results = string(zjson)
 	} else {
 		results = renderBulkZonesStatusTable(statusRespList, c)
 	}
-	akamai.StopSpinnerOk()
 
 	if len(outputPath) > 1 {
-		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
+		fmt.Printf("Writing Output to %s ", outputPath)
 		// pathname and exists?
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
 		defer zfHandle.Close()
 		_, err = zfHandle.WriteString(string(results))
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
 		zfHandle.Sync()
-		akamai.StopSpinnerOk()
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")
@@ -118,36 +135,4 @@ func cmdStatusBulkZones(c *cli.Context) error {
 
 	return nil
 
-}
-
-func renderBulkZonesStatusTable(submitStatusList []*dnsv2.BulkStatusResponse, c *cli.Context) string {
-
-	//bold := color.New(color.FgWhite, color.Bold)
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Bulk Zones Request Status")
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
-
-	for _, submitStatus := range submitStatusList {
-		table.Append([]string{"Request Id", submitStatus.RequestId, ""})
-		table.Append([]string{"", "Zones Submitted", strconv.Itoa(submitStatus.ZonesSubmitted)})
-		table.Append([]string{"", "Success Count", strconv.Itoa(submitStatus.SuccessCount)})
-		table.Append([]string{"", "Failure Count", strconv.Itoa(submitStatus.FailureCount)})
-		table.Append([]string{"", "Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
-		table.Append([]string{"", "Expiration Date", submitStatus.ExpirationDate})
-	}
-	table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
 }

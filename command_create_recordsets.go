@@ -15,25 +15,29 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/cli-dns/edgegrid"
+
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdCreateRecordsets(c *cli.Context) error {
 
-	config, err := akamai.GetEdgegridConfig(c)
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dnsv2.Init(config)
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	var (
 		zonename   string
@@ -58,70 +62,70 @@ func cmdCreateRecordsets(c *cli.Context) error {
 	} else {
 		return cli.NewExitError(color.RedString("Input file is required"), 1)
 	}
-	akamai.StartSpinner("Fetching Recordset data ", "")
+	fmt.Println("Fetching Recordset data ", "")
 	// Read in json file
-	data, err := ioutil.ReadFile(inputPath)
+	data, err := os.ReadFile(inputPath)
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString("Failed to read input file"), 1)
 	}
-	recordsets := &dnsv2.Recordsets{}
-	err = json.Unmarshal(data, recordsets)
-	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString("Failed to parse json file content"), 1)
+
+	var wrapper struct {
+		RecordSets []dns.RecordSet `json:"recordsets"`
 	}
-	akamai.StopSpinnerOk()
-	akamai.StartSpinner("Creating Recordsets ", "")
-	err = recordsets.Save(zonename, true)
+	err = json.Unmarshal(data, &wrapper)
 	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset creation failed. Error: %s", err.Error())), 1)
+		return cli.NewExitError(color.RedString("Failed to parse json file content: %s", err), 1)
 	}
-	akamai.StopSpinnerOk()
+
+	req := dns.CreateRecordSetsRequest{
+		Zone: zonename,
+		RecordSets: &dns.RecordSets{
+			RecordSets: wrapper.RecordSets,
+		},
+	}
+
+	if err := dnsClient.CreateRecordSets(ctx, req); err != nil {
+		return cli.NewExitError(fmt.Sprintf("Failed to create recordset: %v", err), 1)
+	}
+
+	fmt.Println("Creating Recordsets ", "")
 
 	if c.IsSet("suppress") && c.Bool("suppress") {
 
 		return nil
 
 	}
-	akamai.StartSpinner("Retrieving Full Recordsets List ", "")
-	recordsetResp, err := dnsv2.GetRecordsets(zonename)
+	fmt.Println("Retrieving Full Recordsets List ", "")
+	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{Zone: zonename, QueryArgs: &dns.RecordSetQueryArgs{ShowAll: true}})
 	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err)), 1)
 	}
-	akamai.StopSpinnerOk()
-	recordsetList := &RecordsetList{Recordsets: recordsetResp.Recordsets} // list of response objects
+
+	recordsetList := RecordsetList{Recordsets: resp.RecordSets} // list of response objects
 	results := ""
-	akamai.StartSpinner("Assembling Recordsets List ", "")
+	fmt.Println("Assembling Recordsets List ", "")
 	// full output
 	if c.IsSet("json") && c.Bool("json") {
 		rjson, err := json.MarshalIndent(recordsetList, "", "  ")
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to display recordsets list"), 1)
 		}
 		results = string(rjson)
 	} else {
-		results = renderRecordsetListTable(zonename, recordsetList.Recordsets, c)
+		results = renderRecordsetListTable(zonename, recordsetList.Recordsets)
 	}
-	akamai.StopSpinnerOk()
 	if len(outputPath) > 1 {
-		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
+		fmt.Printf("Writing Output to %s ", outputPath)
 		rlfHandle, err := os.Create(outputPath)
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
 		defer rlfHandle.Close()
 		_, err = rlfHandle.WriteString(string(results))
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to write zone list output to file"), 1)
 		}
 		rlfHandle.Sync()
-		akamai.StopSpinnerOk()
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")

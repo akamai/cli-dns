@@ -1,0 +1,8 @@
+{
+  "name": "a.test123456example.com",
+  "type": "A",
+  "ttl": 1200,
+  "rdata": [
+    "10.1.1.10"
+  ]
+}

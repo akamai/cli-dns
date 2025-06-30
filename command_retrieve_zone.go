@@ -14,25 +14,31 @@
 
 package main
 
-import (
+/*import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v1"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/cli-dns/edgegrid"
+
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
 
 func cmdRetrieveZone(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dns.Config = config
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
+
 
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
@@ -40,26 +46,27 @@ func cmdRetrieveZone(c *cli.Context) error {
 	}
 
 	hostname := c.Args().First()
-	akamai.StartSpinner(
-		"Fetching zone...",
-		fmt.Sprintf("Fetching zone...... [%s]", color.GreenString("OK")),
-	)
-	zone, err := dns.GetZone(hostname)
+
+
+	fmt.Fprintf(c.App.Writer, "Fetching zone..." )
+
+	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
+		Zone: hostname,
+	})
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString("Zone not found "), 1)
 	}
 
-	outputZone := dns.NewZone(hostname)
-	outputZone.Token = zone.Token
+	fmt.Fprintln(c.App.Writer, fmt.Sprintf(" [%s]", color.GreenString("OK")))
+
+	outputZone := zoneResp.Zone
+	//outputZone.Token = zoneResp.Token
+
 	if c.IsSet("json") && c.Bool("json") && !c.IsSet("filter") {
-		json, err := json.MarshalIndent(zone, "", "  ")
+		json, err := json.MarshalIndent(zoneResp, "", "  ")
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to display zone"), 1)
 		}
-		akamai.StopSpinnerOk()
-
 		fmt.Fprintln(c.App.Writer, string(json))
 		return nil
 	}
@@ -70,69 +77,70 @@ func cmdRetrieveZone(c *cli.Context) error {
 			filter[strings.ToUpper(recordType)] = true
 		}
 	}
+	filteredZone := dns.Zone{Zone: outputZone.Zone}
 
-	if _, ok := filter["A"]; (!c.IsSet("filter") || ok) && len(zone.Zone.A) > 0 {
-		outputZone.Zone.A = zone.Zone.A
+	if _, ok := filter["A"]; (!c.IsSet("filter") || ok) && len(outputZone.A) > 0 {
+		filteredZone.A = outputZone.A
 	}
-	if _, ok := filter["AAAA"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Aaaa) > 0 {
+	if _, ok := filter["AAAA"]; (!c.IsSet("filter") || ok) && len(outputZone.Aaaa) > 0 {
 		outputZone.Zone.Aaaa = zone.Zone.Aaaa
 	}
-	if _, ok := filter["AFSDB"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Afsdb) > 0 {
+	if _, ok := filter["AFSDB"]; (!c.IsSet("filter") || ok) && len(outputZone.Afsdb) > 0 {
 		outputZone.Zone.Afsdb = zone.Zone.Afsdb
 	}
-	if _, ok := filter["CNAME"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Cname) > 0 {
+	if _, ok := filter["CNAME"]; (!c.IsSet("filter") || ok) && len(outputZone.Cname) > 0 {
 		outputZone.Zone.Cname = zone.Zone.Cname
 	}
-	if _, ok := filter["DNSKEY"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Dnskey) > 0 {
+	if _, ok := filter["DNSKEY"]; (!c.IsSet("filter") || ok) && len(outputZone.Dnskey) > 0 {
 		outputZone.Zone.Dnskey = zone.Zone.Dnskey
 	}
-	if _, ok := filter["DS"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Ds) > 0 {
+	if _, ok := filter["DS"]; (!c.IsSet("filter") || ok) && len(outputZone.Ds) > 0 {
 		outputZone.Zone.Ds = zone.Zone.Ds
 	}
-	if _, ok := filter["HINFO"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Hinfo) > 0 {
+	if _, ok := filter["HINFO"]; (!c.IsSet("filter") || ok) && len(outputZone.Hinfo) > 0 {
 		outputZone.Zone.Hinfo = zone.Zone.Hinfo
 	}
-	if _, ok := filter["LOC"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Loc) > 0 {
+	if _, ok := filter["LOC"]; (!c.IsSet("filter") || ok) && len(outputZone.Loc) > 0 {
 		outputZone.Zone.Loc = zone.Zone.Loc
 	}
-	if _, ok := filter["MX"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Mx) > 0 {
+	if _, ok := filter["MX"]; (!c.IsSet("filter") || ok) && len(outputZone.Mx) > 0 {
 		outputZone.Zone.Mx = zone.Zone.Mx
 	}
-	if _, ok := filter["NAPTR"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Naptr) > 0 {
+	if _, ok := filter["NAPTR"]; (!c.IsSet("filter") || ok) && len(outputZone.Naptr) > 0 {
 		outputZone.Zone.Naptr = zone.Zone.Naptr
 	}
-	if _, ok := filter["NS"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Ns) > 0 {
+	if _, ok := filter["NS"]; (!c.IsSet("filter") || ok) && len(outputZone.Ns) > 0 {
 		outputZone.Zone.Ns = zone.Zone.Ns
 	}
-	if _, ok := filter["NSEC3"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Nsec3) > 0 {
+	if _, ok := filter["NSEC3"]; (!c.IsSet("filter") || ok) && len(outputZone.Nsec3) > 0 {
 		outputZone.Zone.Nsec3 = zone.Zone.Nsec3
 	}
-	if _, ok := filter["NSEC3PARAM"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Nsec3param) > 0 {
+	if _, ok := filter["NSEC3PARAM"]; (!c.IsSet("filter") || ok) && len(outputZone.Nsec3param) > 0 {
 		outputZone.Zone.Nsec3param = zone.Zone.Nsec3param
 	}
-	if _, ok := filter["PTR"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Ptr) > 0 {
+	if _, ok := filter["PTR"]; (!c.IsSet("filter") || ok) && len(outputZone.Ptr) > 0 {
 		outputZone.Zone.Ptr = zone.Zone.Ptr
 	}
-	if _, ok := filter["RP"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Rp) > 0 {
+	if _, ok := filter["RP"]; (!c.IsSet("filter") || ok) && len(outputZone.Rp) > 0 {
 		outputZone.Zone.Rp = zone.Zone.Rp
 	}
-	if _, ok := filter["RRSIG"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Rrsig) > 0 {
+	if _, ok := filter["RRSIG"]; (!c.IsSet("filter") || ok) && len(outputZone.Rrsig) > 0 {
 		outputZone.Zone.Rrsig = zone.Zone.Rrsig
 	}
-	if _, ok := filter["SOA"]; (!c.IsSet("filter") || ok) && zone.Zone.Soa != nil {
+	if _, ok := filter["SOA"]; (!c.IsSet("filter") || ok) && outputZone.Soa != nil {
 		outputZone.Zone.Soa = zone.Zone.Soa
 	}
 
-	if _, ok := filter["SPF"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Spf) > 0 {
+	if _, ok := filter["SPF"]; (!c.IsSet("filter") || ok) && len(outputZone.Spf) > 0 {
 		outputZone.Zone.Spf = zone.Zone.Spf
 	}
-	if _, ok := filter["SRV"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Srv) > 0 {
+	if _, ok := filter["SRV"]; (!c.IsSet("filter") || ok) && len(outputZone.Srv) > 0 {
 		outputZone.Zone.Srv = zone.Zone.Srv
 	}
-	if _, ok := filter["SSHFP"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Sshfp) > 0 {
+	if _, ok := filter["SSHFP"]; (!c.IsSet("filter") || ok) && len(outputZone.Sshfp) > 0 {
 		outputZone.Zone.Sshfp = zone.Zone.Sshfp
 	}
-	if _, ok := filter["TXT"]; (!c.IsSet("filter") || ok) && len(zone.Zone.Txt) > 0 {
+	if _, ok := filter["TXT"]; (!c.IsSet("filter") || ok) && len(outputZone.Txt) > 0 {
 		outputZone.Zone.Txt = zone.Zone.Txt
 	}
 
@@ -404,4 +412,4 @@ func renderZoneTable(zone *dns.Zone, c *cli.Context) {
 
 	table.SetCaption(true, fmt.Sprintf("Zone: %s; Token: %s", zone.Zone.Name, zone.Token))
 	table.Render()
-}
+}*/

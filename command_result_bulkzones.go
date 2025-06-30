@@ -15,60 +15,28 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/cli-dns/edgegrid"
+
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
 
-// Temporary... Typo in dns library
-type BulkCreateResultResponse struct {
-	RequestId                string                  `json:"requestId"`
-	SuccessfullyCreatedZones []string                `json:"successfullyCreatedZones"`
-	FailedZones              []*dnsv2.BulkFailedZone `json:"failedZones"`
-}
-
-type BulkDeleteResultResponse struct {
-	RequestId                string                  `json:"requestId"`
-	SuccessfullyDeletedZones []string                `json:"successfullyDeletedZones"`
-	FailedZones              []*dnsv2.BulkFailedZone `json:"failedZones"`
-}
-
-func convertBulkCreateResultResponse(resp *dnsv2.BulkCreateResultResponse) *BulkCreateResultResponse {
-
-	res := &BulkCreateResultResponse{}
-	res.RequestId = resp.RequestId
-	res.SuccessfullyCreatedZones = resp.SuccessfullyCreatedZones
-	res.FailedZones = resp.FailedZones
-
-	return res
-}
-
-func convertBulkDeleteResultResponse(resp *dnsv2.BulkDeleteResultResponse) *BulkDeleteResultResponse {
-
-	res := &BulkDeleteResultResponse{}
-	res.RequestId = resp.RequestId
-	res.SuccessfullyDeletedZones = resp.SuccessfullyDeletedZones
-	res.FailedZones = resp.FailedZones
-
-	return res
-}
-
-// end temp
-
 func cmdResultBulkZones(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dnsv2.Init(config)
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	var (
 		requestids []string
@@ -81,10 +49,9 @@ func cmdResultBulkZones(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("One or more requestids required. "), 1)
 	}
 
-	akamai.StartSpinner("Preparing bulk zones result request(s) ", "")
+	fmt.Println("Preparing bulk zones result request(s) ", "")
 
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
 	}
 	if c.IsSet("delete") {
@@ -95,71 +62,66 @@ func cmdResultBulkZones(c *cli.Context) error {
 		outputPath = filepath.FromSlash(outputPath)
 	}
 
-	akamai.StartSpinner("Submitting Bulk Zones request  ", "")
+	var results string
+	fmt.Println("Submitting Bulk Zones request  ", "")
 	//  Submit
-	var resultResp interface{}
-	resultRespCreateList := make([]*BulkCreateResultResponse, 0)
-	resultRespDeleteList := make([]*BulkDeleteResultResponse, 0)
-	for _, requestid := range requestids {
-		if op == "create" {
-			resultResp, err = dnsv2.GetBulkZoneCreateResult(requestid)
-			if err != nil {
-				akamai.StopSpinnerFail()
-				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request Result Query failedd. Error: %s", err.Error())), 1)
-			}
-			resultRespCreateList = append(resultRespCreateList, convertBulkCreateResultResponse(resultResp.(*dnsv2.BulkCreateResultResponse)))
-		} else {
-			resultResp, err = dnsv2.GetBulkZoneDeleteResult(requestid)
-			if err != nil {
-				akamai.StopSpinnerFail()
-				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request Result Query failedd. Error: %s", err.Error())), 1)
-			}
-			resultRespDeleteList = append(resultRespDeleteList, convertBulkDeleteResultResponse(resultResp.(*dnsv2.BulkDeleteResultResponse)))
-		}
-	}
-	akamai.StopSpinnerOk()
+	if op == "create" {
+		resultRespCreateList := make([]*dns.GetBulkZoneCreateResultResponse, 0)
 
-	results := ""
-	akamai.StartSpinner("Assembling Bulk Zone Response Content ", "")
-	// full output
-	if c.IsSet("json") && c.Bool("json") {
-		var zjson []byte
-		var err error
-		if op == "create" {
-			zjson, err = json.MarshalIndent(resultRespCreateList, "", "  ")
+		for _, requestid := range requestids {
+			resp, err := dnsClient.GetBulkZoneCreateResult(ctx, dns.GetBulkZoneCreateResultRequest{
+				RequestID: requestid,
+			})
+			if err != nil {
+				return cli.NewExitError(color.RedString(fmt.Sprintf("bulk zone create error: %s", err)), 1)
+			}
+			resultRespCreateList = append(resultRespCreateList, resp)
+		}
+		if c.IsSet("json") && c.Bool("json") {
+			jsonData, err := json.MarshalIndent(resultRespCreateList, "", " ")
+			if err != nil {
+				return cli.NewExitError(color.RedString("Failed to marshal JSON result"), 1)
+			}
+			results = string(jsonData)
 		} else {
-			zjson, err = json.MarshalIndent(resultRespDeleteList, "", "  ")
-		}
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Unable to process result response"), 1)
-		}
-		results = string(zjson)
-	} else {
-		if op == "create" {
 			results = renderBulkZonesResultTable(resultRespCreateList, c)
+		}
+	} else {
+		resultRespDeleteList := make([]*dns.GetBulkZoneDeleteResultResponse, 0)
+		for _, requestid := range requestids {
+			resp, err := dnsClient.GetBulkZoneDeleteResult(ctx, dns.GetBulkZoneDeleteResultRequest{
+				RequestID: requestid,
+			})
+			if err != nil {
+				return cli.NewExitError(color.RedString(fmt.Sprintf("bulk zone delete error: %s", err)), 1)
+			}
+			resultRespDeleteList = append(resultRespDeleteList, resp)
+		}
+		if c.IsSet("json") && c.Bool("json") {
+			jsonData, err := json.MarshalIndent(resultRespDeleteList, "", " ")
+			if err != nil {
+				return cli.NewExitError(color.RedString("Failed to marshal JSON result"), 1)
+			}
+			results = string(jsonData)
 		} else {
 			results = renderBulkZonesResultTable(resultRespDeleteList, c)
 		}
 	}
-	akamai.StopSpinnerOk()
 
+	fmt.Println("Assembling Bulk Zone Response Content ", "")
 	if len(outputPath) > 1 {
-		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
+		fmt.Printf("Writing Output to %s ", outputPath)
 		// pathname and exists?
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
 		defer zfHandle.Close()
 		_, err = zfHandle.WriteString(string(results))
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
 		zfHandle.Sync()
-		akamai.StopSpinnerOk()
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")
@@ -168,90 +130,4 @@ func cmdResultBulkZones(c *cli.Context) error {
 
 	return nil
 
-}
-
-func renderBulkZonesResultTable(resultRespList interface{}, c *cli.Context) string {
-
-	//bold := color.New(color.FgWhite, color.Bold)
-	var requestid string
-	var succzones []string
-	var failzones []*dnsv2.BulkFailedZone
-	op := "Created"
-	tableHeader := "Bulk Zones %s Request Results"
-
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln(fmt.Sprintf(tableHeader, op))
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
-
-	if resultList, ok := resultRespList.([]*BulkCreateResultResponse); ok {
-		for _, crreq := range resultList {
-			requestid = crreq.RequestId
-			succzones = crreq.SuccessfullyCreatedZones
-			failzones = crreq.FailedZones
-			table.Append([]string{"Request Id", requestid, "", ""})
-			table.Append([]string{"", fmt.Sprintf("Successfully %s Zones", op), "", ""})
-			if len(succzones) == 0 {
-				table.Append([]string{"", "", "None", ""})
-			} else {
-				for _, zn := range succzones {
-					table.Append([]string{"", "", zn, ""})
-				}
-			}
-			table.Append([]string{"", fmt.Sprintf("Failed %s Zones", op), "", ""})
-			if len(failzones) == 0 {
-				table.Append([]string{"", "", "None", ""})
-			} else {
-				for _, fzn := range failzones {
-					table.Append([]string{"", "", fzn.Zone, fzn.FailureReason})
-				}
-			}
-		}
-		table.Render()
-		outString += fmt.Sprintln(tableString.String())
-
-		return outString
-	}
-	resultList, ok := resultRespList.([]*BulkDeleteResultResponse)
-	if !ok {
-		return "Unable to create result table"
-	}
-	for _, delreq := range resultList {
-		requestid = delreq.RequestId
-		succzones = delreq.SuccessfullyDeletedZones
-		failzones = delreq.FailedZones
-		op = "Deleted"
-		table.Append([]string{"Request Id", requestid, "", ""})
-		table.Append([]string{fmt.Sprintf("", "Successfully %s Zones", op), "", ""})
-		if len(succzones) == 0 {
-			table.Append([]string{"", "", "None", ""})
-		} else {
-			for _, zn := range succzones {
-				table.Append([]string{"", "", zn, ""})
-			}
-		}
-		table.Append([]string{fmt.Sprintf("", "Failed %s Zones", op), "", ""})
-		if len(succzones) == 0 {
-			table.Append([]string{"", "", "None", ""})
-		} else {
-			for _, fzn := range failzones {
-				table.Append([]string{"", "", fzn.Zone, fzn.FailureReason})
-			}
-		}
-	}
-
-	table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
 }
