@@ -1,3 +1,17 @@
+// Copyright 2020. Akamai Technologies, Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -15,6 +29,8 @@ import (
 )
 
 func cmdUpdateZoneconfig(c *cli.Context) error {
+
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -31,6 +47,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		masterZoneFileData string
 	)
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
@@ -39,6 +56,8 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	fmt.Println("Preparing zone for update ", "")
 
 	zonename = c.Args().First()
+
+	// New zone struct to hold zone data for update
 	newZone := &dns.ZoneCreate{}
 
 	masterfile := c.IsSet("dns") && c.Bool("dns")
@@ -60,23 +79,22 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	}
 
 	if c.IsSet("file") {
-		// Read in json file
 		data, err := os.ReadFile(inputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
 		}
+		// Update master zone file if dns flag set
 		if masterfile {
 			masterZoneFileData = string(data)
 			if len(masterZoneFileData) > httpMaxBody {
-				// limited by config.MaxBody max (int)
 				return cli.NewExitError(color.RedString("Master Zone File size too large to process"), 1)
 			}
 		} else {
-			// set local variables and Object
 			err = json.Unmarshal(data, &newZone)
 			if err != nil {
 				return cli.NewExitError(color.RedString("Failed to parse json file content into zone object %s", err), 1)
 			}
+			// Validate required fields from JSON
 			if newZone.Zone != "" {
 				zonename = strings.TrimSpace(strings.ToLower(newZone.Zone))
 			} else {
@@ -91,12 +109,11 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		}
 	}
 
-	// init the library
 	if zonename == "" {
 		return cli.NewExitError(color.RedString("zone name is required"), 1)
 	}
 
-	// See if already exists
+	// Fetch zone
 	zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err != nil {
 		return cli.NewExitError(color.RedString("failure while checking zone existance %s", err), 1)
@@ -105,7 +122,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("zone retrieval returned nil!"), 1)
 	}
 
-	// Print full zone struct in a readable JSON format
 	zoneJson, err := json.MarshalIndent(zone, "", "  ")
 	if err != nil {
 		fmt.Printf("Failed to marshal zone for debug: %v\n", err)
@@ -116,6 +132,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	payload, _ := json.MarshalIndent(newZone, "", "  ")
 	fmt.Println("Payload to be sent:\n", string(payload))
 
+	// Handling update using CLI flags
 	if c.IsSet("type") && !c.IsSet("file") {
 		newZone.Zone = zonename
 		newZone.Type = strings.ToUpper(c.String("type"))
@@ -178,6 +195,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		}
 	}
 
+	// Updating master zone file
 	if masterfile {
 		fmt.Println("Updating Master Zone File ", "")
 		err = dnsClient.PostMasterZoneFile(ctx, dns.PostMasterZoneFileRequest{
@@ -199,6 +217,8 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid value provided for zone. Error: %s", err.Error())), 1)
 	}
+
+	// Updating zone
 	err = dnsClient.UpdateZone(ctx, dns.UpdateZoneRequest{
 		CreateZone: newZone,
 	})
@@ -212,13 +232,13 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read zone content. Error: %s", err.Error())), 1)
 	}
 
-	// suppress result output?
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
 	results := ""
 	fmt.Println("Assembling Zone Content ", "")
-	// full output
+
+	// Format output either as JSON or table format
 	if c.IsSet("json") && c.Bool("json") {
 		zjson, err := json.MarshalIndent(zone, "", "  ")
 		if err != nil {
@@ -229,9 +249,9 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		results = renderZoneconfigTable(zone, c)
 	}
 
+	// Write output to file or console
 	if len(outputPath) > 1 {
 		fmt.Printf("Writing Output to %s ", outputPath)
-		// pathname and exists?
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)

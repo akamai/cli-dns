@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/akamai/cli-dns/edgegrid"
-	"github.com/olekukonko/tablewriter"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/fatih/color"
@@ -30,6 +29,7 @@ import (
 
 func cmdRetrieveZone(c *cli.Context) error {
 
+	// Initialize context and EdgeGrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -39,15 +39,17 @@ func cmdRetrieveZone(c *cli.Context) error {
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("hostname is required"), 1)
+		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
 	zonename := c.Args().First()
 
 	fmt.Fprintf(c.App.Writer, "Fetching zone...")
 
+	// Fetch zone details
 	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
 		Zone: zonename,
 	})
@@ -57,6 +59,7 @@ func cmdRetrieveZone(c *cli.Context) error {
 
 	fmt.Fprintln(c.App.Writer, fmt.Sprintf(" [%s]", color.GreenString("OK")))
 
+	// Fetch all recordsets for the zone
 	recordsResp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{Zone: zonename})
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("failed to retrieve zone: %s", err)), 1)
@@ -68,6 +71,7 @@ func cmdRetrieveZone(c *cli.Context) error {
 		filter[strings.ToUpper(recordType)] = true
 	}
 
+	// Filter recordsets based on record type
 	filteredRecords := []dns.RecordSet{}
 	for _, rec := range recordsResp.RecordSets {
 		if len(filter) == 0 || filter[strings.ToUpper(rec.Type)] {
@@ -75,6 +79,7 @@ func cmdRetrieveZone(c *cli.Context) error {
 		}
 	}
 
+	// Output as JSON
 	if c.IsSet("json") && c.Bool("json") {
 		jsonObj := map[string]interface{}{
 			"zone":    zoneResp,
@@ -93,57 +98,4 @@ func cmdRetrieveZone(c *cli.Context) error {
 
 	return nil
 
-}
-
-func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.Context) {
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-
-	table.SetHeader([]string{"Field", "value"})
-	table.Append([]string{"Zone", zone.Zone})
-	table.Append([]string{"Type", zone.Type})
-	table.Append([]string{"Masters", strings.Join(zone.Masters, ", ")})
-	table.Append([]string{"Comment", zone.Comment})
-	table.Append([]string{"Contract ID", zone.ContractID})
-	table.Append([]string{"SignAndServe", fmt.Sprintf("%v", zone.SignAndServeAlgorithm)})
-	table.Append([]string{"Target", zone.Target})
-	table.Append([]string{"EndCustomerID", zone.EndCustomerID})
-	table.Append([]string{"Activation State", zone.ActivationState})
-	table.Append([]string{"Last Modified By", zone.LastModifiedBy})
-	table.Append([]string{"Last Modified Date", zone.LastModifiedDate})
-	table.Append([]string{"Version ID", zone.VersionID})
-
-	if zone.TSIGKey != nil {
-		table.Append([]string{"TSIG Name", zone.TSIGKey.Name})
-		table.Append([]string{"TSIG Algorithm", zone.TSIGKey.Algorithm})
-		table.Append([]string{"TSIG Secret", zone.TSIGKey.Secret})
-	}
-
-	table.Render()
-	fmt.Fprintln(c.App.Writer, tableString.String())
-
-	if len(records) > 0 {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, "DNS Records: ")
-		fmt.Fprintln(c.App.Writer, "")
-
-		recordsTableString := &strings.Builder{}
-		recordsTable := tablewriter.NewWriter(recordsTableString)
-		recordsTable.SetHeader([]string{"Name", "Type", "TTL", "Data"})
-		recordsTable.SetAutoWrapText(false)
-		recordsTable.SetRowLine(true)
-
-		for _, rec := range records {
-			for _, data := range rec.Rdata {
-				recordsTable.Append([]string{
-					rec.Name, rec.Type, fmt.Sprintf("%d", rec.TTL), data,
-				})
-			}
-		}
-		recordsTable.Render()
-		fmt.Fprintln(c.App.Writer, recordsTableString.String())
-	}
 }

@@ -1,3 +1,7 @@
 vendor/
 akamai-dns
 build/
+.env
+*.env
+.env.*
+

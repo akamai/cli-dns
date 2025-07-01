@@ -42,6 +42,8 @@ type BulkZonesResponse struct {
 }
 
 func cmdSubmitBulkZones(c *cli.Context) error {
+
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -86,10 +88,13 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 	if c.IsSet("bypassZoneSafety") && c.Bool("bypassZoneSafety") {
 		bypass = true
 	}
+
+	// Validate that only one operation is selected (create or delete)
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
 		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
 	}
 
+	// Creating object based on operation type
 	if c.IsSet("delete") {
 		op = "delete"
 		bulkDeleteList = &dns.ZoneNameListResponse{}
@@ -128,12 +133,10 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		maxNumZones = batchsize
 	}
 
-	// Read in json file
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
 		return cli.NewExitError(color.RedString("Failed to read input file"), 1)
 	}
-	// set local variables and Object
 
 	if op == "create" {
 		err = json.Unmarshal(data, newBulkZones)
@@ -151,10 +154,9 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 
 	submitStatusList := make([]*dns.BulkZonesResponse, 0)
 
-	// init library with approp sized MaxBody
-
 	fmt.Println("Submitting Bulk Zones request  ", "")
-	//  Submit
+
+	// Handling bulk create in batches
 	if op == "create" {
 		ZonesMax := len(newBulkZones.Zones)
 		numZones := ZonesMax
@@ -181,6 +183,8 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		if len(bulkZones.Zones) > 0 {
 			bulkZonesList = append(bulkZonesList, bulkZones)
 		}
+
+		// Submit each batch to API
 		for _, zonesRequest := range bulkZonesList {
 			req := dns.CreateBulkZonesRequest{
 				BulkZones:       zonesRequest,
@@ -196,7 +200,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 			})
 		}
 	} else {
-		// can't imagine size of bulkDeleteList would ever be greater than max body size!
+		// Handle bulk zone DELETE request
 		resp, err := dnsClient.DeleteBulkZones(ctx, dns.DeleteBulkZonesRequest{
 			ZonesList:          bulkDeleteList,
 			BypassSafetyChecks: &bypass,
@@ -210,6 +214,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		})
 	}
 
+	// Format results in JSON or table format
 	results := ""
 	if c.IsSet("json") && c.Bool("json") {
 		jsonBytes, err := json.MarshalIndent(submitStatusList, "", " ")
@@ -220,6 +225,8 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 	} else {
 		results = renderBulkZonesRequestStatusTable(submitStatusList, c)
 	}
+
+	// Write output either to output file or console
 	if len(outputPath) < 1 {
 		outputPath = fmt.Sprintf("Bulk_Submit_Request_Status_%d.json", time.Now().Unix())
 	}

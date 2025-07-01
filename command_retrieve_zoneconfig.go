@@ -32,6 +32,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 
 	fmt.Fprintf(os.Stderr, "Command %s", c.Command.Name)
 
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -43,6 +44,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 
 	zonename := c.Args().First()
 
+	// Validate zonename argument
 	if zonename == "" {
 		return cli.NewExitError(color.RedString("zonename required"), 1)
 	}
@@ -52,13 +54,16 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		results    string
 	)
 
+	// Check if the --dns flag is set to retrieve zone as master file
 	isMasterfile := c.Bool("dns")
 
+	// Get the output file path if set
 	if c.IsSet("output") {
 		outputPath = filepath.FromSlash(c.String("output"))
 	}
 
 	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Zone..."))
+	// Retrieve zone as master zone file
 	if isMasterfile {
 		content, err := dnsClient.GetMasterZoneFile(ctx, dns.GetMasterZoneFileRequest{Zone: zonename})
 		if err != nil {
@@ -69,6 +74,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		}
 		results = content
 	} else {
+		// Retrieve zone in structured format
 		zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 		if err != nil {
 			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
@@ -76,6 +82,8 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 			}
 			return cli.NewExitError(fmt.Sprintf(color.RedString("zailed to retrieve zone: %s", err)), 1)
 		}
+
+		// Output as JSON or table format
 		if c.Bool("json") {
 			b, err := json.MarshalIndent(zone, "", " ")
 			if err != nil {
@@ -87,6 +95,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		}
 	}
 
+	// Write output to file or console
 	if outputPath != "" {
 		fmt.Fprintf(os.Stderr, color.GreenString("Writing output to %s...\n", outputPath))
 		file, err := os.Create(outputPath)

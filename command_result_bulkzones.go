@@ -29,6 +29,8 @@ import (
 )
 
 func cmdResultBulkZones(c *cli.Context) error {
+
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -51,6 +53,7 @@ func cmdResultBulkZones(c *cli.Context) error {
 
 	fmt.Println("Preparing bulk zones result request(s) ", "")
 
+	// Validate create/ delete flags
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
 		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
 	}
@@ -64,7 +67,6 @@ func cmdResultBulkZones(c *cli.Context) error {
 
 	var results string
 	fmt.Println("Submitting Bulk Zones request  ", "")
-	//  Submit
 	if op == "create" {
 		resultRespCreateList := make([]*dns.GetBulkZoneCreateResultResponse, 0)
 
@@ -108,10 +110,10 @@ func cmdResultBulkZones(c *cli.Context) error {
 		}
 	}
 
+	/// Write output to file or print to console
 	fmt.Println("Assembling Bulk Zone Response Content ", "")
 	if len(outputPath) > 1 {
 		fmt.Printf("Writing Output to %s ", outputPath)
-		// pathname and exists?
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)

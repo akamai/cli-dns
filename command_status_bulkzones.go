@@ -29,6 +29,8 @@ import (
 )
 
 func cmdStatusBulkZones(c *cli.Context) error {
+
+	// Initialize context Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -44,6 +46,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 		op         = "create"
 	)
 
+	// Retrieve request IDs from CLI flags
 	requestids = c.StringSlice("requestid")
 	if len(requestids) < 1 {
 		return cli.NewExitError(color.RedString("requestid(s) required. "), 1)
@@ -51,6 +54,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 
 	fmt.Println("Preparing bulk zones status request ", "")
 
+	// Validate that either --create or --delete is set
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
 		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
 	}
@@ -65,9 +69,11 @@ func cmdStatusBulkZones(c *cli.Context) error {
 	var statusResp *dns.BulkStatusResponse
 	statusRespList := make([]*dns.BulkStatusResponse, 0)
 	fmt.Println("Submitting Bulk Zones request(s)  ", "")
+
+	// Loop through all provided request IDs
 	for _, requestid := range requestids {
-		//  Submit
 		if op == "create" {
+			// Get bulk zone create status
 			r, err := dnsClient.GetBulkZoneCreateStatus(ctx, dns.GetBulkZoneCreateStatusRequest{
 				RequestID: requestid,
 			})
@@ -83,6 +89,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 				ExpirationDate: r.ExpirationDate,
 			}
 		} else {
+			// Get bulk zone delete status
 			r, err := dnsClient.GetBulkZoneDeleteStatus(ctx, dns.GetBulkZoneDeleteStatusRequest{
 				RequestID: requestid,
 			})
@@ -103,7 +110,6 @@ func cmdStatusBulkZones(c *cli.Context) error {
 
 	results := ""
 	fmt.Println("Assembling Bulk Zone Response Content ", "")
-	// full output
 	if c.IsSet("json") && c.Bool("json") {
 		zjson, err := json.MarshalIndent(statusRespList, "", "  ")
 		if err != nil {
@@ -114,9 +120,9 @@ func cmdStatusBulkZones(c *cli.Context) error {
 		results = renderBulkZonesStatusTable(statusRespList, c)
 	}
 
+	// Write output to file or console
 	if len(outputPath) > 1 {
 		fmt.Printf("Writing Output to %s ", outputPath)
-		// pathname and exists?
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)

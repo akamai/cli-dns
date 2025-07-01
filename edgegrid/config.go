@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli"
 )
 
+// Loads Edgegrid config from env, file or CLI flags
 func GetEdgegridConfig(c *cli.Context) (*edgegrid.Config, error) {
 	edgercOps := []edgegrid.Option{
 		edgegrid.WithEnv(true),
@@ -30,6 +31,7 @@ func GetEdgegridConfig(c *cli.Context) (*edgegrid.Config, error) {
 	return config, nil
 }
 
+// Get path to .edgerc file
 func GetEdgercPath(c *cli.Context) string {
 	if path := c.String("edgerc"); path != "" {
 		return path
@@ -37,6 +39,7 @@ func GetEdgercPath(c *cli.Context) string {
 	return edgegrid.DefaultConfigFile
 }
 
+// Get .edgerc section
 func GetEdgercSection(c *cli.Context) string {
 	if section := c.String("section"); section != "" {
 		return section
@@ -44,6 +47,7 @@ func GetEdgercSection(c *cli.Context) string {
 	return edgegrid.DefaultSection
 }
 
+// Build Retry config from env variables
 func getRetryConfig() (*session.RetryConfig, error) {
 	if disabledStr, ok := os.LookupEnv("AKAMAI_RETRY_DISABLED"); ok {
 		disabled, err := strconv.ParseBool(disabledStr)

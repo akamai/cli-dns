@@ -29,12 +29,15 @@ import (
 )
 
 func cmdRetrieveRecordset(c *cli.Context) error {
+
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 	zonename := c.Args().First()
 
+	// Validate required flags
 	if !c.IsSet("name") || !c.IsSet("type") {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset name and type are required"), 1)
@@ -48,6 +51,7 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 		outputPath = filepath.FromSlash(c.String("output"))
 	}
 
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)

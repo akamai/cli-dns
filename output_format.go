@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli"
 )
 
+// Recordset Table format
 func renderRecordsetTable(zone string, record *dns.GetRecordResponse) string {
 	return fmt.Sprintf(`
     Zone: %s
@@ -22,6 +23,7 @@ func renderRecordsetTable(zone string, record *dns.GetRecordResponse) string {
 		zone, record.Name, record.RecordType, record.TTL, strings.Join(record.Target, "\n "))
 }
 
+// Recordsets list table format
 func renderRecordsetListTable(zone string, recordsets []dns.RecordSet) string {
 	var out strings.Builder
 	out.WriteString("\nZone Recordsets\n\n")
@@ -59,6 +61,7 @@ func renderRecordsetListTable(zone string, recordsets []dns.RecordSet) string {
 	return out.String()
 }
 
+// Zone table format
 func renderZoneconfigTable(zone *dns.GetZoneResponse, c *cli.Context) string {
 
 	//bold := color.New(color.FgWhite, color.Bold)
@@ -134,6 +137,7 @@ func renderZoneconfigTable(zone *dns.GetZoneResponse, c *cli.Context) string {
 	return outString
 }
 
+// Zone list table format
 func renderZoneListTable(zones []dns.ZoneResponse) string {
 	outString := ""
 	outString += fmt.Sprintln(" ")
@@ -196,56 +200,7 @@ func renderZoneListTable(zones []dns.ZoneResponse) string {
 	return outString
 }
 
-/*var b strings.Builder
-b.WriteString("\nZone List\n\n")
-
-t := tablewriter.NewWriter(&b)
-t.SetHeader([]string{"ZONE", "ATTRIBUTE", "VALUE"})
-t.SetAutoWrapText(false)
-t.SetRowLine(true)
-t.SetBorder(false)
-t.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-
-if len(zones) == 0 {
-	t.Append([]string{"No zones found", " ", " "})
-} else {
-	for _, z := range zones {
-		t.Append([]string{z.Zone, "Type", z.Type})
-		if z.Comment != "" {
-			t.Append([]string{" ", "Comment", z.Comment})
-		}
-		if strings.ToUpper(z.Type) == "SECONDARY" {
-			if len(z.Masters) > 0 {
-				t.Append([]string{" ", "Masters", strings.Join(z.Masters, ",")})
-			}
-			if z.TSIGKey != nil {
-				t.Append([]string{" ", "TsigKey:Name", z.TSIGKey.Name})
-				t.Append([]string{" ", "TsigKey:Algorithm", z.TSIGKey.Algorithm})
-				t.Append([]string{" ", "TsigKey:Secret", z.TSIGKey.Secret})
-			}
-		}
-		if strings.ToUpper(z.Type) == "PRIMARY" || strings.ToUpper(z.Type) == "SECONDARY" {
-			t.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", z.SignAndServe)})
-			if z.SignAndServeAlgorithm != "" {
-				t.Append([]string{" ", "SignAndServeAlgorithm", z.SignAndServeAlgorithm})
-			}
-		}
-		if strings.ToUpper(z.Type) == "ALIAS" {
-			t.Append([]string{" ", "Target", z.Target})
-			t.Append([]string{" ", "AliasCount", strconv.FormatInt(z.AliasCount, 10)})
-		}
-
-		t.Append([]string{" ", "ActivationState", z.ActivationState})
-		t.Append([]string{" ", "LastActivationDate", z.LastActivationDate})
-		t.Append([]string{" ", "LastModifiedDate", z.LastModifiedDate})
-		t.Append([]string{" ", "VersionId", z.VersionID})
-		t.Append([]string{" ", " ", " "})
-	}
-}
-
-t.Render()
-return b.String()*/
-
+// Zone list summary format
 func renderZoneSummaryListTable(zones []dns.ZoneResponse) string {
 	var b strings.Builder
 	b.WriteString("\n Zone List Summary\n\n")
@@ -269,9 +224,63 @@ func renderZoneSummaryListTable(zones []dns.ZoneResponse) string {
 
 }
 
+// Zone table format
+func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.Context) {
+	tableString := &strings.Builder{}
+	table := tablewriter.NewWriter(tableString)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAutoWrapText(false)
+	table.SetRowLine(true)
+
+	table.SetHeader([]string{"Field", "value"})
+	table.Append([]string{"Zone", zone.Zone})
+	table.Append([]string{"Type", zone.Type})
+	table.Append([]string{"Masters", strings.Join(zone.Masters, ", ")})
+	table.Append([]string{"Comment", zone.Comment})
+	table.Append([]string{"Contract ID", zone.ContractID})
+	table.Append([]string{"SignAndServe", fmt.Sprintf("%v", zone.SignAndServeAlgorithm)})
+	table.Append([]string{"Target", zone.Target})
+	table.Append([]string{"EndCustomerID", zone.EndCustomerID})
+	table.Append([]string{"Activation State", zone.ActivationState})
+	table.Append([]string{"Last Modified By", zone.LastModifiedBy})
+	table.Append([]string{"Last Modified Date", zone.LastModifiedDate})
+	table.Append([]string{"Version ID", zone.VersionID})
+
+	if zone.TSIGKey != nil {
+		table.Append([]string{"TSIG Name", zone.TSIGKey.Name})
+		table.Append([]string{"TSIG Algorithm", zone.TSIGKey.Algorithm})
+		table.Append([]string{"TSIG Secret", zone.TSIGKey.Secret})
+	}
+
+	table.Render()
+	fmt.Fprintln(c.App.Writer, tableString.String())
+
+	if len(records) > 0 {
+		fmt.Fprintln(c.App.Writer, "")
+		fmt.Fprintln(c.App.Writer, "DNS Records: ")
+		fmt.Fprintln(c.App.Writer, "")
+
+		recordsTableString := &strings.Builder{}
+		recordsTable := tablewriter.NewWriter(recordsTableString)
+		recordsTable.SetHeader([]string{"Name", "Type", "TTL", "Data"})
+		recordsTable.SetAutoWrapText(false)
+		recordsTable.SetRowLine(true)
+
+		for _, rec := range records {
+			for _, data := range rec.Rdata {
+				recordsTable.Append([]string{
+					rec.Name, rec.Type, fmt.Sprintf("%d", rec.TTL), data,
+				})
+			}
+		}
+		recordsTable.Render()
+		fmt.Fprintln(c.App.Writer, recordsTableString.String())
+	}
+}
+
+// Bulk zone request status format
 func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse, c *cli.Context) string {
 
-	//bold := color.New(color.FgWhite, color.Bold)
 	outString := ""
 	outString += fmt.Sprintln(" ")
 	outString += fmt.Sprintln("Bulk Zones Request Submission Status")
@@ -300,9 +309,8 @@ func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse
 	return outString
 }
 
+// Bulk zone status format
 func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse, c *cli.Context) string {
-
-	//bold := color.New(color.FgWhite, color.Bold)
 	outString := ""
 	outString += fmt.Sprintln(" ")
 	outString += fmt.Sprintln("Bulk Zones Request Status")
@@ -332,6 +340,7 @@ func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse, c *c
 	return outString
 }
 
+// Bulk zone result format
 func renderBulkZonesResultTable(resultRespList interface{}, c *cli.Context) string {
 
 	//bold := color.New(color.FgWhite, color.Bold)

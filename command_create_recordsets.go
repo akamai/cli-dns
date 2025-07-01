@@ -30,6 +30,7 @@ import (
 
 func cmdCreateRecordsets(c *cli.Context) error {
 
+	// Initialize context and EdgeGrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -45,6 +46,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 		inputPath  string
 	)
 
+	// Validate zone name argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
@@ -52,6 +54,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 
 	zonename = c.Args().First()
 
+	// Get input and output file paths if set
 	if c.IsSet("output") {
 		outputPath = c.String("output")
 		outputPath = filepath.FromSlash(outputPath)
@@ -63,7 +66,8 @@ func cmdCreateRecordsets(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("Input file is required"), 1)
 	}
 	fmt.Println("Fetching Recordset data ", "")
-	// Read in json file
+
+	// Read and parse input JSON file
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
 		return cli.NewExitError(color.RedString("Failed to read input file"), 1)
@@ -77,6 +81,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("Failed to parse json file content: %s", err), 1)
 	}
 
+	// Create multiple recordsets
 	req := dns.CreateRecordSetsRequest{
 		Zone: zonename,
 		RecordSets: &dns.RecordSets{
@@ -95,16 +100,18 @@ func cmdCreateRecordsets(c *cli.Context) error {
 		return nil
 
 	}
-	fmt.Println("Retrieving Full Recordsets List ", "")
+
+	// Retrieve updated list of recordsets
+	fmt.Println(color.BlueString("Retrieving Full Recordsets List ", ""))
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{Zone: zonename, QueryArgs: &dns.RecordSetQueryArgs{ShowAll: true}})
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err)), 1)
 	}
 
-	recordsetList := RecordsetList{Recordsets: resp.RecordSets} // list of response objects
+	// Format recordsets for output
+	recordsetList := RecordsetList{Recordsets: resp.RecordSets}
 	results := ""
-	fmt.Println("Assembling Recordsets List ", "")
-	// full output
+	fmt.Println(color.BlueString("Assembling Recordsets List ", ""))
 	if c.IsSet("json") && c.Bool("json") {
 		rjson, err := json.MarshalIndent(recordsetList, "", "  ")
 		if err != nil {
@@ -114,6 +121,8 @@ func cmdCreateRecordsets(c *cli.Context) error {
 	} else {
 		results = renderRecordsetListTable(zonename, recordsetList.Recordsets)
 	}
+
+	// Write to file if output path is specified or print to stdout
 	if len(outputPath) > 1 {
 		fmt.Printf("Writing Output to %s ", outputPath)
 		rlfHandle, err := os.Create(outputPath)

@@ -32,11 +32,13 @@ import (
 
 func cmdCreateZoneconfig(c *cli.Context) error {
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 	zonename := c.Args().First()
 
@@ -47,6 +49,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
+	// Parse Flags
 	var (
 		inputPath  = c.String("file")
 		outputPath = c.String("output")
@@ -56,6 +59,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 
 	newZone := &dns.ZoneCreate{}
 
+	// Load zone config from file if specified
 	if inputPath != "" {
 		data, err := os.ReadFile(inputPath)
 		if err != nil {
@@ -72,6 +76,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 			contractID = newZone.ContractID
 		}
 	} else if c.IsSet("type") {
+		// Construct zone config from CLI flags
 		newZone.Zone = zonename
 		newZone.Type = strings.ToUpper(c.String("type"))
 		newZone.Comment = c.String("comment")
@@ -111,6 +116,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid zone value: %s", err)), 1)
 	}
 
+	// Check if zone already exists
 	_, err = dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err == nil {
 		return cli.NewExitError(color.RedString("zone already exists"), 1)
@@ -120,6 +126,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		}
 	}
 
+	// Create new zone
 	err = dnsClient.CreateZone(ctx, dns.CreateZoneRequest{
 		CreateZone:      newZone,
 		ZoneQueryString: dns.ZoneQueryString{Contract: contractID, Group: groupID},
@@ -128,6 +135,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("zone create failed: %s", err), 1)
 	}
 
+	// Optionally initialize zone with default records
 	if c.Bool("initialize") && strings.ToUpper(newZone.Type) == "PRIMARY" {
 		err = dnsClient.SaveChangeList(ctx, dns.SaveChangeListRequest{Zone: zonename})
 		if err != nil {
@@ -139,6 +147,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		}
 	}
 
+	// Fetch zone after creation
 	zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("failed to read zone config: %v", err)), 1)
@@ -147,6 +156,8 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 	if c.Bool("suppress") {
 		return nil
 	}
+
+	// Format result for display
 	var result string
 	if c.Bool("json") {
 		b, err := json.MarshalIndent(zone.Zone, "", " ")
@@ -158,6 +169,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		result = renderZoneconfigTable(zone, c)
 	}
 
+	// Output to file or stdout
 	if outputPath != "" {
 		f, err := os.Create(filepath.FromSlash(outputPath))
 		if err != nil {

@@ -30,6 +30,8 @@ import (
 )
 
 func cmdUpdateRecordset(c *cli.Context) error {
+
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -45,12 +47,14 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		inputPath  string
 	)
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
 	zonename = c.Args().First()
+
 	if c.IsSet("file") {
 		inputPath = c.String("file")
 		inputPath = filepath.FromSlash(inputPath)
@@ -60,17 +64,16 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		outputPath = filepath.FromSlash(outputPath)
 	}
 	fmt.Println("Preparing recordset ", "")
-	// Single recordset ops use RecordBody as return Object
 	newrecord := &dns.RecordBody{}
 	setchange := false
 	if c.IsSet("file") {
+		// Read and parse the file into a dns.RecordSet
 		newrecordset := &dns.RecordSet{}
-		// Read in json file
 		data, err := os.ReadFile(filepath.FromSlash(inputPath))
 		if err != nil {
 			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
 		}
-		// set local variables and Object
+
 		err = json.Unmarshal(data, &newrecordset)
 		if err != nil {
 			return cli.NewExitError(color.RedString("Failed to parse json file content into recordset"), 1)
@@ -88,6 +91,8 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		}
 		newrecord.Target = newrecordset.Rdata
 	} else if c.IsSet("type") && c.IsSet("name") {
+		// Update recordset CLI flags
+
 		newrecord.RecordType = strings.ToUpper(c.String("type"))
 		newrecord.Name = c.String("name")
 		if c.IsSet("ttl") {
@@ -103,17 +108,16 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("Recordset field values or input file are required"), 1)
 	}
 
-	// See if already exists
+	// Retrieve recordset for updation
 	record, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
 		Zone:       zonename,
 		Name:       newrecord.Name,
 		RecordType: newrecord.RecordType,
-	}) // returns RecordBody!
+	})
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Failure retrieving recordset. Error: %s", err)), 1)
 	}
 
-	// Overlay changed fields
 	if !c.IsSet("file") {
 		if !c.IsSet("ttl") {
 			newrecord.TTL = record.TTL
@@ -130,6 +134,7 @@ func cmdUpdateRecordset(c *cli.Context) error {
 
 	fmt.Println("Updating Recordset  ", "")
 
+	// Update recordset
 	err = dnsClient.UpdateRecord(ctx, dns.UpdateRecordRequest{
 		Zone:   zonename,
 		Record: newrecord,
@@ -138,6 +143,7 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset update failed. Error: %s", err.Error())), 1)
 	}
 
+	// Fetching updated recordset
 	fmt.Println("Verifying Recordset  ", "")
 
 	updatedRecord, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
@@ -148,15 +154,15 @@ func cmdUpdateRecordset(c *cli.Context) error {
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read recordset content. Error: %s", err)), 1)
 	}
-	// suppress result output?
+
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
 	results := ""
 	fmt.Println("Assembling recordset Content ", "")
-	// full output
+
+	// Output either as JSON or table format
 	if c.IsSet("json") && c.Bool("json") {
-		// output as recordset
 		recordset := &dns.RecordSet{}
 		recordset.Name = record.Name
 		recordset.Type = updatedRecord.RecordType
@@ -171,9 +177,9 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		results = renderRecordsetTable(zonename, updatedRecord)
 	}
 
+	// Write output to file or console
 	if len(outputPath) > 1 {
 		fmt.Printf("Writing Output to %s ", outputPath)
-		// pathname and exists?
 		rsHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)

@@ -12,8 +12,10 @@ import (
 
 type ctxKey string
 
+// context key for storing session
 var sessionKey ctxKey = "session"
 
+// sets up a new Akamai Edgegrid session
 func InitializeSession(c *cli.Context) (session.Session, error) {
 	edgerc, err := GetEdgegridConfig(c)
 	if err != nil {
@@ -35,6 +37,7 @@ func InitializeSession(c *cli.Context) (session.Session, error) {
 		options = append(options, session.WithRetries(*retryConfig))
 	}
 
+	// Create new session
 	sess, err := session.New(options...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize edgegrid session: %s", err)
@@ -43,10 +46,12 @@ func InitializeSession(c *cli.Context) (session.Session, error) {
 	return sess, nil
 }
 
+// attaches session to the context
 func WithSession(ctx context.Context, sess session.Session) context.Context {
 	return context.WithValue(ctx, sessionKey, sess)
 }
 
+// retrieves the session from context
 func GetSession(ctx context.Context) session.Session {
 	sess, ok := ctx.Value(sessionKey).(session.Session)
 	if !ok {

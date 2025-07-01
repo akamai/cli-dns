@@ -26,6 +26,7 @@ import (
 
 func cmdDeleteRecordset(c *cli.Context) error {
 
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -35,12 +36,14 @@ func cmdDeleteRecordset(c *cli.Context) error {
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 	zonename := c.Args().First()
 
+	// Validate required flags
 	if !c.IsSet("name") || !c.IsSet("type") {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset name and type field values are required"), 1)
@@ -48,18 +51,19 @@ func cmdDeleteRecordset(c *cli.Context) error {
 	recordType := c.String("type")
 	recordName := c.String("name")
 
+	// Check if recordset exists
 	fmt.Println("Checking Recordset existance  ", "")
-	// See if already exists
+
 	_, err = dnsClient.GetRecord(ctx, dns.GetRecordRequest{
 		Zone:       zonename,
 		Name:       recordName,
 		RecordType: recordType,
-	}) // returns RecordBody!
+	})
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Failure retrieving recordset. Error: %s", err)), 1)
 	}
 
-	// Single recordset ops use RecordBody as return Object
+	// Delete recordset
 	err = dnsClient.DeleteRecord(ctx, dns.DeleteRecordRequest{
 		Zone:       zonename,
 		Name:       recordName,

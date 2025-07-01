@@ -44,6 +44,8 @@ type ZoneList struct {
 }
 
 func cmdListZoneconfig(c *cli.Context) error {
+
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -53,6 +55,7 @@ func cmdListZoneconfig(c *cli.Context) error {
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
+	// Build zone list query from CLI flags
 	query := dns.ListZonesRequest{
 		ShowAll: true,
 		SortBy:  "zone",
@@ -70,6 +73,7 @@ func cmdListZoneconfig(c *cli.Context) error {
 		query.Search = c.String("search")
 	}
 
+	// Fetch zones from DNS client
 	resp, err := dnsClient.ListZones(ctx, query)
 	if err != nil {
 		return fmt.Errorf("zone list retrieval failed: %v", err)
@@ -77,6 +81,7 @@ func cmdListZoneconfig(c *cli.Context) error {
 	zones := resp.Zones
 	var output string
 
+	// Format output in summary or table, optionally as JSON
 	if c.Bool("summary") {
 		if c.Bool("json") {
 			summaryList := ZoneSummaryList{}
@@ -108,6 +113,7 @@ func cmdListZoneconfig(c *cli.Context) error {
 		}
 	}
 
+	// Write output to file or print to console
 	if outFile := c.String("output"); outFile != "" {
 		path := filepath.FromSlash(outFile)
 		if err := os.WriteFile(path, []byte(output), 0644); err != nil {

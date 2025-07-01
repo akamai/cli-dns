@@ -35,12 +35,13 @@ type RecordsetList struct {
 }
 
 func cmdListRecordsets(c *cli.Context) error {
-
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename required"), 1)
 	}
 
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
@@ -78,12 +79,15 @@ func cmdListRecordsets(c *cli.Context) error {
 		req.QueryArgs.Types = strings.Join(typeFilter, ",")
 	}
 
+	// Fetch recordsets
 	resp, err := dnsClient.GetRecordSets(ctx, req)
 	if err != nil {
 		return cli.NewExitError(color.RedString("Recordset List retrieval failed %s", err), 1)
 	}
 
 	recordsets := resp.RecordSets
+
+	// Format output (JSON or table)
 	var results string
 
 	if c.Bool("json") {

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -30,9 +31,10 @@ import (
 )
 
 func cmdUpdateZone(c *cli.Context) error {
+
+	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
-	// Initialize Akamai session
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
 		return cli.NewExitError(fmt.Sprintf("Session initialization failed: %v", err), 1)
@@ -40,6 +42,7 @@ func cmdUpdateZone(c *cli.Context) error {
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
@@ -51,26 +54,33 @@ func cmdUpdateZone(c *cli.Context) error {
 		outputPath string
 	)
 
-	if !c.IsSet("file") {
-		return cli.NewExitError(color.RedString("Input file is required (--file)"), 1)
+	var fileData []byte
+	if c.IsSet("file") {
+		inputPath = filepath.FromSlash(c.String("file"))
+		fileData, err = os.ReadFile(inputPath)
+		if err != nil {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read input file: %v", err)), 1)
+		}
+	} else {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeCharDevice) != 0 {
+			return cli.NewExitError(color.RedString("No input file or piped data provided"), 1)
+		}
+		fileData, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read from STDIN: %v", err)), 1)
+		}
 	}
-	inputPath = filepath.FromSlash(c.String("file"))
 
 	if c.IsSet("output") {
 		outputPath = filepath.FromSlash(c.String("output"))
 	}
 
-	// Read the entire input file
-	fileData, err := os.ReadFile(inputPath)
-	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read input file: %v", err)), 1)
-	}
-
-	// If master zone file upload flag is set, upload as raw text and return immediately
+	// Handle master zone file upload if --dns flag is set
 	if c.Bool("dns") {
 		masterZoneFileData := string(fileData)
 
-		const httpMaxBody = 10 * 1024 * 1024 // Example 10 MB max size, adjust as needed
+		const httpMaxBody = 10 * 1024 * 1024
 		if len(masterZoneFileData) > httpMaxBody {
 			return cli.NewExitError(color.RedString("Master Zone File size too large to process"), 1)
 		}
@@ -87,24 +97,20 @@ func cmdUpdateZone(c *cli.Context) error {
 		return nil
 	}
 
-	// --- Continue with your existing recordsets update logic ---
-
-	// Parse input recordsets JSON
+	// Parse input JSON for recordsets
 	inputRecordSets := &dns.RecordSets{}
 	err = json.Unmarshal(fileData, inputRecordSets)
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to parse JSON input file: %v", err)), 1)
 	}
 
-	// ... rest of your existing code unchanged ...
+	// Prepare recordset update list and handle SOA record
 	var recordsetWorkList []dns.RecordSet
 	soaInSet := false
 	soaIndex := -1
 
 	if c.Bool("overwrite") {
-		// Overwrite mode: replace all recordsets with input
 		recordsetWorkList = inputRecordSets.RecordSets
-		// Mark if SOA present in input
 		for i, rs := range recordsetWorkList {
 			if rs.Type == "SOA" {
 				soaInSet = true
@@ -113,8 +119,6 @@ func cmdUpdateZone(c *cli.Context) error {
 			}
 		}
 	} else {
-		// Merge mode: update existing recordsets and add new ones
-
 		fmt.Println("Retrieving Existing Recordsets ...")
 		existingResp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 			Zone: zonename,
@@ -128,7 +132,6 @@ func cmdUpdateZone(c *cli.Context) error {
 
 		recordsetWorkList = existingResp.RecordSets
 
-		// Find SOA index in existing sets
 		for i, rs := range recordsetWorkList {
 			if rs.Type == "SOA" {
 				soaIndex = i
@@ -136,7 +139,6 @@ func cmdUpdateZone(c *cli.Context) error {
 			}
 		}
 
-		// Update or add recordsets from input
 		for _, updatedRS := range inputRecordSets.RecordSets {
 			found := false
 			for i, existingRS := range recordsetWorkList {
@@ -147,7 +149,6 @@ func cmdUpdateZone(c *cli.Context) error {
 				}
 			}
 			if !found {
-				// Append new recordset
 				recordsetWorkList = append(recordsetWorkList, updatedRS)
 			}
 			if updatedRS.Type == "SOA" {
@@ -155,7 +156,6 @@ func cmdUpdateZone(c *cli.Context) error {
 			}
 		}
 
-		// If SOA record was not updated in input, bump serial number
 		if !soaInSet && soaIndex >= 0 {
 			soaRec := &recordsetWorkList[soaIndex]
 			if len(soaRec.Rdata) > 0 {
@@ -188,6 +188,7 @@ func cmdUpdateZone(c *cli.Context) error {
 		return nil
 	}
 
+	// Retrieve and display updated recordsets
 	fmt.Println("Retrieving Updated Recordsets ...")
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 		Zone: zonename,
@@ -207,6 +208,7 @@ func cmdUpdateZone(c *cli.Context) error {
 		results = renderRecordsetListTable(zonename, resp.RecordSets)
 	}
 
+	// Output results to file or console
 	if outputPath != "" {
 		f, err := os.Create(outputPath)
 		if err != nil {

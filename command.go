@@ -18,209 +18,8 @@ import (
 	"github.com/urfave/cli"
 )
 
-// V1 Records
-/*var (
-	baseCmdFlags = []cli.Flag{}
-
-	recordOptions = map[string]map[string]struct {
-		required bool
-		flagType string
-	}{
-		"A": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"AAAA": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"AFSDB": {
-			"active":  {false, "bool"},
-			"name":    {true, "string"},
-			"subtype": {true, "int"},
-			"target":  {true, "string"},
-			"ttl":     {false, "int"},
-		},
-		"CNAME": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"DNSKEY": {
-			"active":    {false, "bool"},
-			"algorithm": {true, "int"},
-			"flags":     {true, "int"},
-			"key":       {true, "string"},
-			"name":      {true, "string"},
-			"protocol":  {true, "int"},
-			"ttl":       {false, "int"},
-		},
-		"DS": {
-			"active":      {false, "bool"},
-			"algorithm":   {true, "int"},
-			"digest":      {true, "string"},
-			"digest-type": {true, "int"},
-			"keytag":      {true, "int"},
-			"name":        {true, "string"},
-			"ttl":         {false, "int"},
-		},
-		"HINFO": {
-			"active":   {false, "bool"},
-			"hardware": {true, "string"},
-			"name":     {true, "string"},
-			"software": {true, "string"},
-			"ttl":      {false, "int"},
-		},
-		"LOC": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"MX": {
-			"active":   {false, "bool"},
-			"name":     {true, "string"},
-			"priority": {true, "int"},
-			"target":   {true, "string"},
-			"ttl":      {false, "int"},
-		},
-		"NAPTR": {
-			"active":      {false, "bool"},
-			"flags":       {true, "string"},
-			"name":        {true, "string"},
-			"order":       {true, "uint16"},
-			"preference":  {true, "uint16"},
-			"regexp":      {true, "string"},
-			"replacement": {true, "string"},
-			"service":     {true, "string"},
-			"ttl":         {false, "int"},
-		},
-		"NS": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"NSEC3": {
-			"active":                 {false, "bool"},
-			"algorithm":              {true, "int"},
-			"flags":                  {true, "int"},
-			"iterations":             {true, "int"},
-			"name":                   {true, "string"},
-			"next-hashed-owner-name": {true, "string"},
-			"salt":                   {true, "string"},
-			"ttl":                    {false, "int"},
-			"type-bitmaps":           {true, "string"},
-		},
-		"NSEC3PARAM": {
-			"active":     {false, "bool"},
-			"algorithm":  {true, "int"},
-			"flags":      {true, "int"},
-			"iterations": {true, "int"},
-			"name":       {true, "string"},
-			"salt":       {true, "string"},
-			"ttl":        {false, "int"},
-		},
-		"PTR": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"RP": {
-			"active":  {false, "bool"},
-			"mailbox": {true, "string"},
-			"name":    {true, "string"},
-			"ttl":     {false, "int"},
-			"txt":     {true, "string"},
-		},
-		"RRSIG": {
-			"active":       {false, "bool"},
-			"algorithm":    {true, "int"},
-			"expiration":   {true, "string"},
-			"inception":    {true, "string"},
-			"keytag":       {true, "int"},
-			"labels":       {true, "int"},
-			"name":         {true, "string"},
-			"original-ttl": {true, "int"},
-			"signature":    {true, "string"},
-			"signer":       {true, "string"},
-			"ttl":          {false, "int"},
-			"type-covered": {true, "string"},
-		},
-		"SOA": {
-			"contact":      {true, "string"},
-			"expire":       {true, "int"},
-			"minimum":      {true, "uint"},
-			"originserver": {true, "string"},
-			"refresh":      {true, "int"},
-			"retry":        {true, "int"},
-			"serial":       {false, "uint"},
-			"ttl":          {false, "int"},
-		},
-		"SPF": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"SRV": {
-			"active":   {false, "bool"},
-			"name":     {true, "string"},
-			"port":     {true, "uint16"},
-			"priority": {true, "int"},
-			"target":   {true, "string"},
-			"ttl":      {false, "int"},
-			"weight":   {true, "uint16"},
-		},
-		"SSHFP": {
-			"active":           {false, "bool"},
-			"algorithm":        {true, "int"},
-			"fingerprint":      {true, "string"},
-			"fingerprint-type": {true, "int"},
-			"name":             {true, "string"},
-			"ttl":              {false, "int"},
-		},
-		"TXT": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-	}
-)*/
-
 func GetCommands() []cli.Command {
 	var commands []cli.Command
-
-	/*recordMap := []string{
-		"A",
-		"AAAA",
-		"AFSDB",
-		"CNAME",
-		"DNSKEY",
-		"DS",
-		"HINFO",
-		"LOC",
-		"MX",
-		"NAPTR",
-		"NS",
-		"NSEC3",
-		"NSEC3PARAM",
-		"PTR",
-		"RP",
-		"RRSIG",
-		"SOA",
-		"SPF",
-		"SRV",
-		"SSHFP",
-		"TXT",
-	}*/
 
 	// V11 Recordsets
 	baseV11BaseFlags := []cli.Flag{
@@ -431,41 +230,41 @@ func GetCommands() []cli.Command {
 	})
 
 	commands = append(commands, cli.Command{
-		Name:        "add-recordset",
-		Description: "Create a new recordset",
-		ArgsUsage:   "<zonename>",
+		Name:        "add-record",
+		Description: "Create or update a DNS recordset in a zone",
+		ArgsUsage:   "<type> <zonename>",
 		Action:      cmdAddRecord,
 		Flags: append(baseSetCmdFlags,
+			cli.StringSliceFlag{
+				Name:  "target",
+				Usage: "Record target (RDATA), multiple flags allowed",
+			},
 			cli.IntFlag{
 				Name:  "ttl",
-				Usage: "Recordset `TTL`",
-			},
-			cli.StringSliceFlag{
-				Name:  "rdata",
-				Usage: "Recordset `RDATA`. Multiple flags allowed.",
-			},
-			cli.StringFlag{
-				Name:  "file",
-				Usage: "`FILE` path to JSON formatted recordset content",
+				Usage: "Recordset TTL in seconds",
 			},
 		),
 	})
 
 	commands = append(commands, cli.Command{
 		Name:        "rm-record",
-		Description: "Delete recordset",
-		ArgsUsage:   "<zonename>",
+		Description: "Remove a DNS recordset from a zone",
+		ArgsUsage:   "<record type> <zonename>",
 		Action:      cmdRmRecord,
-		Flags: []cli.Flag{
+		Flags: append(baseV11CmdFlags,
 			cli.StringFlag{
 				Name:  "name",
-				Usage: "Recordset `NAME`",
+				Usage: "Record name to delete (eg: --name www)",
 			},
-			cli.StringFlag{
-				Name:  "type",
-				Usage: "Recordset `TYPE`",
+			cli.BoolFlag{
+				Name:  "force-multiple",
+				Usage: "Force delete all matching records without confirmation",
 			},
-		},
+			cli.BoolFlag{
+				Name:  "non-interactive",
+				Usage: "Run in non-interactive mode (e.g. CI). Fails if multiple matches and not forced.",
+			},
+		),
 	})
 
 	// V11 Zones
