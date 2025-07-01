@@ -4,4 +4,5 @@ build/
 .env
 *.env
 .env.*
+.DS_Store
 
