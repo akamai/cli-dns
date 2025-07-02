@@ -236,7 +236,7 @@ func GetCommands() []cli.Command {
 		Action:      cmdAddRecord,
 		Flags: append(baseSetCmdFlags,
 			cli.StringSliceFlag{
-				Name:  "target",
+				Name:  "rdata",
 				Usage: "Record target (RDATA), multiple flags allowed",
 			},
 			cli.IntFlag{

@@ -974,8 +974,6 @@ Assembling Bulk Zone Response Content ... [OK]
 
 ### Retrieving a Zone
 
-NOTE: This sub command has been deprecated and will be removed in a future release.
-
 To retrieve a Zone use the `retrieve-zone` command:
 
 ```
@@ -996,32 +994,42 @@ $ akamai dns retrieve-zone example.org --filter A --filter AAAA --json
 ```
 ```json
 {
-  "token": "9218376e14c2797e0d06e8d2f918d45f",
-  "zone": {
-    "name": "example.com",
-    "a": [
-      {
-        "name": "www",
-        "ttl": 3600,
-        "active": true,
-        "target": "192.0.2.1"
-      }
-    ],
-    "aaaa": [
-      {
-        "name": "www",
-        "ttl": 3600,
-        "active": true,
-        "target": "2001:db8:0:0:0:0:0:1"
-      }
-    ]
+ "records": [
+  {
+   "name": "a.example.org",
+   "type": "A",
+   "ttl": 900,
+   "rdata": [
+    "10.0.0.10",
+    "10.0.0.20"
+   ]
+  },
+  {
+   "name": "test.example.org",
+   "type": "AAAA",
+   "ttl": 600,
+   "rdata": [
+    "2001:db8:0:0:0:0:0:1"
+   ]
   }
+ ],
+ "zone": {
+  "zone": "example.org",
+  "type": "PRIMARY",
+  "comment": "primary zone config",
+  "signAndServe": true,
+  "signAndServeAlgorithm": "RSA_SHA256",
+  "contractId": "1-1AB123",
+  "activationState": "PENDING",
+  "lastActivationDate": "2025-07-02T07:57:34.146414Z",
+  "lastModifiedBy": "xxxxx",
+  "lastModifiedDate": "2025-07-02T09:28:38.141705Z",
+  "versionId": "a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e"
+ }
 }
 ```
 
 ### Update a Zone
-
-NOTE: This sub command has been deprecated and will be removed in a future release.
 
 Update a zone using `akamai dns update-zone`. This command allows you to input either
 a [Edge DNS JSON payload](https://developer.akamai.com/api/luna/config-dns/resources.html#addormodifyazone), or a standard DNS zone file.
@@ -1058,15 +1066,11 @@ $ akamai dns update-zone example.org --overwrite -f example.org.zone.json
 
 To add a new DNS record use `akamai dns add-record <record type>`. Each setting for the record is a flag, for example to add a `CNAME` record:
 
-NOTE: This sub command has been deprecated and will be removed in a future release.
-
 ```
-$ akamai dns add-record CNAME example.org --name www --target example.org --ttl 3600
+$ akamai dns add-record CNAME example.org --name www --rdata example.org --ttl 3600
 ```
 
 ### Remove a Record
-
-NOTE: This sub command has been deprecated and will be removed in a future release.
 
 Use `akamai dns rm-record <record type>` to remove one or more records matching the given flags.
 

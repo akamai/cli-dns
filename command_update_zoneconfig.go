@@ -132,8 +132,8 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		fmt.Printf("Retrieved Zone:\n%s\n", string(zoneJson))
 	}
 
-	payload, _ := json.MarshalIndent(newZone, "", "  ")
-	fmt.Println("Payload to be sent:\n", string(payload))
+	/*payload, _ := json.MarshalIndent(newZone, "", "  ")
+	fmt.Println("Payload to be sent:\n", string(payload))*/
 
 	// Handling update using CLI flags
 	if c.IsSet("type") && !c.IsSet("file") {

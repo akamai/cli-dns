@@ -42,9 +42,9 @@ func cmdAddRecord(c *cli.Context) error {
 	zonename := strings.TrimSuffix(c.Args().Get(1), ".")
 
 	//validate required flags
-	if !c.IsSet("name") || !c.IsSet("target") || !c.IsSet("ttl") {
+	if !c.IsSet("name") || !c.IsSet("rdata") || !c.IsSet("ttl") {
 		cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("--name, --target and --ttl are required"), 1)
+		return cli.NewExitError(color.RedString("--name, --rdata and --ttl are required"), 1)
 	}
 
 	name := c.String("name")
@@ -56,7 +56,7 @@ func cmdAddRecord(c *cli.Context) error {
 	}
 
 	ttl := c.Int("ttl")
-	rdata := c.StringSlice("target")
+	rdata := c.StringSlice("rdata")
 	outputPath := ""
 	if c.IsSet("output") {
 		outputPath = filepath.FromSlash(c.String("output"))
