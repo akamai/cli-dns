@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/akamai/cli-dns/edgegrid"
 
@@ -63,8 +64,23 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 	}
 
 	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Zone..."))
+
+	zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
+	if err != nil {
+		if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
+			return cli.NewExitError(color.RedString("zone does not exist"), 1)
+		}
+		return cli.NewExitError(fmt.Sprintf(color.RedString("failed to retrieve zone: %s", err)), 1)
+	}
+
 	// Retrieve zone as master zone file
 	if isMasterfile {
+
+		// ALIAS zones do not support master file view
+		if strings.EqualFold(zone.Type, "ALIAS") {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("zone %s is an ALIAS zone and does not support master file retrieval", zonename)), 1)
+		}
+
 		content, err := dnsClient.GetMasterZoneFile(ctx, dns.GetMasterZoneFileRequest{Zone: zonename})
 		if err != nil {
 			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
@@ -75,13 +91,13 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		results = content
 	} else {
 		// Retrieve zone in structured format
-		zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
+		/*zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 		if err != nil {
 			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
 				return cli.NewExitError(color.RedString("zone does not exist"), 1)
 			}
 			return cli.NewExitError(fmt.Sprintf(color.RedString("zailed to retrieve zone: %s", err)), 1)
-		}
+		}*/
 
 		// Output as JSON or table format
 		if c.Bool("json") {

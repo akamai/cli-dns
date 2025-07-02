@@ -238,7 +238,7 @@ func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.
 	table.Append([]string{"Masters", strings.Join(zone.Masters, ", ")})
 	table.Append([]string{"Comment", zone.Comment})
 	table.Append([]string{"Contract ID", zone.ContractID})
-	table.Append([]string{"SignAndServe", fmt.Sprintf("%v", zone.SignAndServeAlgorithm)})
+	table.Append([]string{"SignAndServe", fmt.Sprintf("%v", zone.SignAndServe)})
 	table.Append([]string{"Target", zone.Target})
 	table.Append([]string{"EndCustomerID", zone.EndCustomerID})
 	table.Append([]string{"Activation State", zone.ActivationState})

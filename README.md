@@ -13,12 +13,6 @@ An [Akamai CLI](https://developer.akamai.com/cli) package for managing DNS Zones
 
 ### Installing
 
-To install this package, use Akamai CLI:
-
-```sh
-$ akamai install dns
-```
-
 You may also use this as a stand-alone command by downloading the
 [latest release binary](https://github.com/akamai/cli-dns/releases)
 for your system, or by cloning this repository and compiling it yourself.
@@ -34,32 +28,6 @@ If you want to compile the package from source, you will need Go 1.18 or later i
   - Windows: `go build -o akamai-dns.exe`
 
 ## Command Summary
-
-### Usage
-
-```
-$  akamai dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
-```
-
-or 
-
-```
-$  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
-```
-
-### Description
-
-   Manage DNS Zones with Edge DNS
-
-
-
-### Global Flags
-
-```
-   --edgerc value      Location of the credentials file (default: "/home/elynes/.edgerc") [$AKAMAI_EDGERC]
-   --section value     Section of the credentials file (default: "dns") [$AKAMAI_EDGERC_SECTION]
-   --accountkey value  Account switch key [$AKAMAI_EDGERC_ACCOUNT_KEY]
-```
 
 ## Built-In Commands
 
@@ -92,9 +60,7 @@ Commands are grouped into several categories.
 
 *-bulkzones commands provide the ability to submit and monitor bulk zone operations.
 
-*-zone and *-record commands provide a more constrained scope of control, treating the zone and records as a single entity. These commands provide backward compatibility with earlier releases of the package.
-
-NOTE: The *-zone and *-record commands utilize and older version of the Edge DNS API and do not support zones with newer record types. These commands have been deprecated and will be removed from a future release.
+*-zone and *-record commands provide a more constrained scope of control, treating the zone and records as a single entity. 
 
 ### Listing Zone Configurations
 
@@ -195,7 +161,7 @@ would result in the following output:
 To retrieve the master zone file and output to the console, an example would be:
 
 ```
-$ akamai dns retrieve-zoneconfig xxx_primary_test.com -dns
+$ akamai dns retrieve-zoneconfig xxx_primary_test.com --dns
 Retrieving Zone
 Retrieving Zone  ... [OK]
 
@@ -358,7 +324,7 @@ Zone Configuration
 To update the master zone file (previously retrieved), an example would be:
 
 ```
-$ akamai dns update-zoneconfig xxx_primary_test.com -dns -file ./master_file
+$ akamai dns update-zoneconfig xxx_primary_test.com --dns --file ./master_file
 Preparing zone for update
 Updating Master Zone File
 Updating Master Zone File ... [OK]
@@ -473,6 +439,7 @@ and result on the following result:
       ]
     }
   ]
+}
 ```
 
 ### Creating Multiple Zone Recordsets
@@ -753,7 +720,7 @@ Flags:
    --output FILE       Output command results to FILE
    --suppress          Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
    --contractid ID     Contract ID. Required for create.
-   --groupid ID        Group ID. Optional for create.
+   --groupid ID        Group ID. Required for create.
    --bypasszonesafety  Bypass zone safety check. Optional for delete.
    --create            Bulk zone create operation.
    --delete            Bulk zone delete operation.
@@ -765,7 +732,7 @@ NOTE: The CLI currently limits the number of zones in a submit request to 1000. 
 An example create submit request  would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default submit-bulkzones -create -contractid 1-3CV382 -groupid 18432 -file bulkcreate.json
+$ akamai dns submit-bulkzones --create --contractid 1-3CV382 --groupid 18432 -file bulkcreate.json
 Preparing bulk zones submit request
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -815,7 +782,7 @@ where the file `./bulkcreate.json` contains:
 An example delete submit request would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default submit-bulkzones -delete -file bulkdelete.json
+$ akamai dns submit-bulkzones --delete --file bulkdelete.json
 Preparing bulk zones submit request
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -866,7 +833,7 @@ Flags:
 An example status check for a request would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default status-bulkzones -create -requestid 309679b5-1ab1-4837-9666-0019d1be891e -json
+$ akamai dns status-bulkzones -create -requestid 309679b5-1ab1-4837-9666-0019d1be891e -json
 Preparing bulk zones status request(s)
 Submitting Bulk Zones request 
 Submitting Bulk Zones request  ... [OK]
@@ -890,7 +857,7 @@ Assembling Bulk Zone Response Content ... [OK]
 An example status check for multiple request ids would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default status-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
+$ akamai dns status-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
 Preparing bulk zones status request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -948,7 +915,7 @@ Flags:
 An example result retrieval for a request would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default result-bulkzones -delete -requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 -json
+$ akamai dns result-bulkzones -delete -requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 -json
 Preparing bulk zones result request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -972,7 +939,7 @@ Assembling Bulk Zone Response Content ... [OK]
 An example result retrieval for multiple request ids would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default result-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
+$ akamai dns result-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
 Preparing bulk zones result request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]

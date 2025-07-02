@@ -59,6 +59,13 @@ func cmdRetrieveZone(c *cli.Context) error {
 
 	fmt.Fprintln(c.App.Writer, fmt.Sprintf(" [%s]", color.GreenString("OK")))
 
+	if strings.EqualFold(zoneResp.Type, "ALIAS") {
+		// Print zone details only
+		fmt.Fprintln(c.App.Writer, "")
+		renderZoneTable(zoneResp, nil, c)
+		return nil
+	}
+
 	// Fetch all recordsets for the zone
 	recordsResp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{Zone: zonename})
 	if err != nil {
