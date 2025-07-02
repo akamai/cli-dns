@@ -79,6 +79,29 @@ func cmdCreateRecordset(c *cli.Context) error {
 
 	newrecord := &dns.RecordBody{}
 
+	missingFlags := []string{}
+
+	if !c.IsSet("name") {
+		missingFlags = append(missingFlags, "--name")
+	}
+	if !c.IsSet("type") {
+		missingFlags = append(missingFlags, "--type")
+	}
+	if !c.IsSet("ttl") {
+		missingFlags = append(missingFlags, "--ttl")
+	}
+	if !c.IsSet("rdata") {
+		missingFlags = append(missingFlags, "--rdata")
+	}
+
+	if len(missingFlags) > 0 {
+		cli.ShowCommandHelp(c, c.Command.Name)
+		return cli.NewExitError(
+			color.RedString("Missing required flags: %s", strings.Join(missingFlags, ", ")),
+			1,
+		)
+	}
+
 	//Load recordset from JSOn file if provided
 	if c.IsSet("file") {
 		data, err := os.ReadFile(filepath.FromSlash(inputPath))
@@ -109,6 +132,12 @@ func cmdCreateRecordset(c *cli.Context) error {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset field values or input file are required"), 1)
 	}
+
+	fmt.Println("Flag values passed:")
+	fmt.Printf("  name: %s\n", c.String("name"))
+	fmt.Printf("  type: %s\n", c.String("type"))
+	fmt.Printf("  ttl: %d\n", c.Int("ttl"))
+	fmt.Printf("  rdata: %v\n", c.StringSlice("rdata"))
 
 	// Check if record already exists
 	existing, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
