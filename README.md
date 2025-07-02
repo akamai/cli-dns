@@ -11,12 +11,6 @@ An [Akamai CLI](https://developer.akamai.com/cli) package for managing DNS Zones
 
 ## Getting Started
 
-### Installing
-
-You may also use this as a stand-alone command by downloading the
-[latest release binary](https://github.com/akamai/cli-dns/releases)
-for your system, or by cloning this repository and compiling it yourself.
-
 ### Compiling from Source
 
 If you want to compile the package from source, you will need Go 1.18 or later installed:
