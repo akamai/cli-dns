@@ -11,21 +11,9 @@ An [Akamai CLI](https://developer.akamai.com/cli) package for managing DNS Zones
 
 ## Getting Started
 
-### Installing
-
-To install this package, use Akamai CLI:
-
-```sh
-$ akamai install dns
-```
-
-You may also use this as a stand-alone command by downloading the
-[latest release binary](https://github.com/akamai/cli-dns/releases)
-for your system, or by cloning this repository and compiling it yourself.
-
 ### Compiling from Source
 
-If you want to compile the package from source, you will need Go 1.18 or later installed:
+If you want to compile the package from source, you will need Go 1.23 or later installed:
 
 1. Create a clone of the target repository:
    `git clone https://github.com/akamai/cli-dns.git`
@@ -34,10 +22,6 @@ If you want to compile the package from source, you will need Go 1.18 or later i
   - Windows: `go build -o akamai-dns.exe`
 
 ## Command Summary
-
-### Description
-
-   Manage DNS Zones with Edge DNS
 
 ## Built-In Commands
 
