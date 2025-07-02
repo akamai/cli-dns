@@ -121,9 +121,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	if zone == nil {
 		return cli.NewExitError(color.RedString("zone retrieval returned nil!"), 1)
 	}
-	if strings.EqualFold(zone.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot be updated", zonename)), 1)
-	}
 
 	zoneJson, err := json.MarshalIndent(zone, "", "  ")
 	if err != nil {
