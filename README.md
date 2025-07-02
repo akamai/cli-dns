@@ -11,6 +11,18 @@ An [Akamai CLI](https://developer.akamai.com/cli) package for managing DNS Zones
 
 ## Getting Started
 
+### Installing
+
+To install this package, use Akamai CLI:
+
+```sh
+$ akamai install dns
+```
+
+You may also use this as a stand-alone command by downloading the
+[latest release binary](https://github.com/akamai/cli-dns/releases)
+for your system, or by cloning this repository and compiling it yourself.
+
 ### Compiling from Source
 
 If you want to compile the package from source, you will need Go 1.23 or later installed:
@@ -22,6 +34,32 @@ If you want to compile the package from source, you will need Go 1.23 or later i
   - Windows: `go build -o akamai-dns.exe`
 
 ## Command Summary
+
+### Usage
+
+```
+$  akamai dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
+```
+
+or 
+
+```
+$  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
+```
+
+### Description
+
+   Manage DNS Zones with Edge DNS
+
+
+
+### Global Flags
+
+```
+   --edgerc value      Location of the credentials file (default: "/home/elynes/.edgerc") [$AKAMAI_EDGERC]
+   --section value     Section of the credentials file (default: "dns") [$AKAMAI_EDGERC_SECTION]
+   --accountkey value  Account switch key [$AKAMAI_EDGERC_ACCOUNT_KEY]
+```
 
 ## Built-In Commands
 
