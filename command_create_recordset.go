@@ -46,6 +46,12 @@ func cmdCreateRecordset(c *cli.Context) error {
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
+	fmt.Println("All args:", os.Args)
+	fmt.Println("Parsed flag names:", c.FlagNames())
+	fmt.Println("--rdata slice:", c.StringSlice("rdata"))
+	fmt.Println("IsSet(\"rdata\"):", c.IsSet("rdata"))
+	fmt.Println("c.String(\"rdata\"):", c.String("rdata"))
+
 	var (
 		zonename   string
 		outputPath string
@@ -78,6 +84,9 @@ func cmdCreateRecordset(c *cli.Context) error {
 	fmt.Println("Preparing recordset ", "")
 
 	newrecord := &dns.RecordBody{}
+
+	rdata := c.StringSlice("rdata")
+	fmt.Println("rdata values:", rdata)
 
 	missingFlags := []string{}
 
