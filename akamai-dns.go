@@ -21,13 +21,33 @@ import (
 )
 
 var (
-	VERSION = "0.5.0"
+	VERSION = "0.6.0"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "akamai-dns"
 	app.Usage = "CLI DNS"
+	app.Version = VERSION
+
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:   "edgerc",
+			Usage:  "Path to the .edgerc file",
+			EnvVar: "AKAMAI_EDGERC",
+		},
+		cli.StringFlag{
+			Name:   "section",
+			Usage:  "Section in the .edgerc file",
+			EnvVar: "AKAMAI_EDGERC_SECTION",
+		},
+		cli.StringFlag{
+			Name:   "accountkey, account-key",
+			Usage:  "Account switch key",
+			EnvVar: "AKAMAI_EDGERC_ACCOUNT_KEY",
+		},
+	}
+
 	app.Commands = GetCommands()
 
 	if err := app.Run(os.Args); err != nil {

@@ -3,6 +3,7 @@ package edgegrid
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -12,12 +13,27 @@ import (
 	"github.com/urfave/cli"
 )
 
+func expandHome(path string) string {
+	if strings.HasPrefix(path, "~") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			return filepath.Join(home, path[1:])
+		}
+		// If error getting home, just return path as-is
+	}
+	return path
+}
+
 // Loads Edgegrid config from env, file or CLI flags
 func GetEdgegridConfig(c *cli.Context) (*edgegrid.Config, error) {
+	edgercPath := expandHome(GetEdgercPath(c))
+	section := GetEdgercSection(c)
+	//accountKey := c.GlobalString("accountkey")
+
 	edgercOps := []edgegrid.Option{
 		edgegrid.WithEnv(true),
-		edgegrid.WithFile(GetEdgercPath(c)),
-		edgegrid.WithSection(GetEdgercSection(c)),
+		edgegrid.WithFile(edgercPath),
+		edgegrid.WithSection(section),
 	}
 	config, err := edgegrid.New(edgercOps...)
 	if err != nil {
@@ -25,7 +41,7 @@ func GetEdgegridConfig(c *cli.Context) (*edgegrid.Config, error) {
 	}
 
 	if c.IsSet("accountkey") {
-		config.AccountKey = c.String("accountkey")
+		config.AccountKey = c.GlobalString("accountkey")
 	}
 
 	return config, nil
@@ -33,7 +49,7 @@ func GetEdgegridConfig(c *cli.Context) (*edgegrid.Config, error) {
 
 // Get path to .edgerc file
 func GetEdgercPath(c *cli.Context) string {
-	if path := c.String("edgerc"); path != "" {
+	if path := c.GlobalString("edgerc"); path != "" {
 		return path
 	}
 	return edgegrid.DefaultConfigFile
@@ -41,7 +57,7 @@ func GetEdgercPath(c *cli.Context) string {
 
 // Get .edgerc section
 func GetEdgercSection(c *cli.Context) string {
-	if section := c.String("section"); section != "" {
+	if section := c.GlobalString("section"); section != "" {
 		return section
 	}
 	return edgegrid.DefaultSection
