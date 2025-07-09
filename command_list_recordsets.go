@@ -76,7 +76,7 @@ func cmdListRecordsets(c *cli.Context) error {
 		sortby = "type"
 	}
 
-	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Recordsets List"))
+	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Recordsets List..."))
 	req := dns.GetRecordSetsRequest{
 		Zone: zonename,
 		QueryArgs: &dns.RecordSetQueryArgs{
@@ -121,7 +121,7 @@ func cmdListRecordsets(c *cli.Context) error {
 		defer f.Close()
 		f.WriteString(results)
 		f.Sync()
-		fmt.Fprintf(os.Stderr, "Output is written to %s", outputPath)
+		fmt.Fprintln(os.Stderr, color.GreenString("Output is written to %s", outputPath))
 	}
 
 	fmt.Fprintln(c.App.Writer, "")

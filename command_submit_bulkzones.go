@@ -247,5 +247,6 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 
 	fmt.Fprintln(c.App.Writer, "")
 	fmt.Fprintln(c.App.Writer, results)
+	fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	return nil
 }

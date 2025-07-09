@@ -113,7 +113,7 @@ func cmdResultBulkZones(c *cli.Context) error {
 	/// Write output to file or print to console
 	fmt.Println("Assembling Bulk Zone Response Content ", "")
 	if len(outputPath) > 1 {
-		fmt.Printf("Writing Output to %s ", outputPath)
+		//fmt.Printf("Writing Output to %s ", outputPath)
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
@@ -124,6 +124,7 @@ func cmdResultBulkZones(c *cli.Context) error {
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
 		zfHandle.Sync()
+		fmt.Println(color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")

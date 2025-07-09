@@ -48,7 +48,7 @@ func GetCommands() []cli.Command {
 		},
 		cli.StringFlag{
 			Name:  "type",
-			Usage: "Recordset TYPE",
+			Usage: "Recordset TYPE (can be ignored for add-record command)",
 		},
 	)
 
@@ -398,7 +398,7 @@ func GetCommands() []cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "groupid",
-				Usage: "Group `ID`. Optional for create.",
+				Usage: "Group `ID`. Required for create.",
 			},
 			cli.BoolFlag{
 				Name:  "bypasszonesafety",

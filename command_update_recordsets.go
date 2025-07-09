@@ -156,7 +156,7 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 	}
 
 	// Fetch full updated list
-	fmt.Println("Retrieving Full Recordsets List ", "")
+	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving full recordsets list...\n"))
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 		Zone: zonename,
 	})
@@ -179,7 +179,7 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 
 	// Write output to file or console
 	if len(outputPath) > 1 {
-		fmt.Printf("Writing Output to %s ", outputPath)
+		//fmt.Printf("Writing Output to %s ", outputPath)
 		rlfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
@@ -190,6 +190,7 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 			return cli.NewExitError(color.RedString("Unable to write zone list output to file"), 1)
 		}
 		rlfHandle.Sync()
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")

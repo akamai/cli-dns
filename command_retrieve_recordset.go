@@ -73,7 +73,7 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
 	}
 
-	fmt.Fprintf(os.Stderr, color.BlueString("\n Retrieving Recordset"))
+	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Recordset..."))
 	record, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
 		Zone:       zonename,
 		RecordType: rstype,
@@ -86,7 +86,7 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("Failed to retrieve recordset: %s", err), 1)
 	}
 
-	fmt.Fprintf(os.Stderr, color.BlueString("Assembling Recordset Output...\n"))
+	fmt.Fprintln(os.Stderr, color.BlueString("Assembling Recordset Output..."))
 	var results string
 	if c.Bool("json") {
 		rs := &dns.RecordSet{

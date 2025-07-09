@@ -25,6 +25,7 @@ var (
 )
 
 func main() {
+	setHelpTemplates()
 	app := cli.NewApp()
 	app.Name = "akamai-dns"
 	app.Usage = "CLI DNS"

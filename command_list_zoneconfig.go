@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/akamai/cli-dns/edgegrid"
+	"github.com/fatih/color"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/urfave/cli"
@@ -119,7 +120,7 @@ func cmdListZoneconfig(c *cli.Context) error {
 		if err := os.WriteFile(path, []byte(output), 0644); err != nil {
 			return fmt.Errorf("failed to write to output file %v", err)
 		}
-		fmt.Fprintf(c.App.Writer, "Output written to %s\n", path)
+		fmt.Fprintln(c.App.Writer, color.GreenString("Output written to %s", path))
 	} else {
 		fmt.Fprintln(c.App.Writer, output)
 	}

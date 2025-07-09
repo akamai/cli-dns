@@ -68,7 +68,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		if err := json.Unmarshal(data, newZone); err != nil {
 			return cli.NewExitError(color.RedString("failed to parse JSON config"), 1)
 		}
-		fmt.Printf("Debug: ContractID from JSON: '%s'\n", newZone.ContractID)
+		//fmt.Printf("Debug: ContractID from JSON: '%s'\n", newZone.ContractID)
 
 		zonename = newZone.Zone
 
@@ -178,7 +178,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		defer f.Close()
 		f.WriteString(result)
 		f.Sync()
-		fmt.Fprintf(os.Stderr, "Output written to %s\n", outputPath)
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	} else {
 		fmt.Fprintln(c.App.Writer, "")
 		fmt.Fprintln(c.App.Writer, result)

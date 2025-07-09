@@ -114,7 +114,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 	}
 
 	// Retrieve updated list of recordsets
-	fmt.Println(color.BlueString("Retrieving Full Recordsets List ", ""))
+	fmt.Println(color.BlueString("Retrieving Full Recordsets List... ", ""))
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{Zone: zonename, QueryArgs: &dns.RecordSetQueryArgs{ShowAll: true}})
 	if err != nil {
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err)), 1)
@@ -123,7 +123,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 	// Format recordsets for output
 	recordsetList := RecordsetList{Recordsets: resp.RecordSets}
 	results := ""
-	fmt.Println(color.BlueString("Assembling Recordsets List ", ""))
+	fmt.Println(color.BlueString("Assembling Recordsets List... ", ""))
 	if c.IsSet("json") && c.Bool("json") {
 		rjson, err := json.MarshalIndent(recordsetList, "", "  ")
 		if err != nil {
@@ -136,7 +136,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 
 	// Write to file if output path is specified or print to stdout
 	if len(outputPath) > 1 {
-		fmt.Printf("Writing Output to %s ", outputPath)
+		//fmt.Println(color.GreenString("Writing Output to %s", outputPath))
 		rlfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
@@ -147,6 +147,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 			return cli.NewExitError(color.RedString("Unable to write zone list output to file"), 1)
 		}
 		rlfHandle.Sync()
+		fmt.Println(color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")

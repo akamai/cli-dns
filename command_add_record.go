@@ -99,12 +99,6 @@ func cmdAddRecord(c *cli.Context) error {
 	})
 
 	if err == nil && existing.RecordType != "" {
-		if existing.RecordType != newrecord.RecordType {
-			return cli.NewExitError(
-				color.RedString("recordset with this name already exists but with a different type (%s). Cannot change type.", existing.RecordType),
-				1,
-			)
-		}
 
 		fmt.Println("Record already exists, updating it instead...")
 
@@ -171,7 +165,7 @@ func cmdAddRecord(c *cli.Context) error {
 	}
 
 	//Output the recordset
-	fmt.Println(color.BlueString("Assembling recordset Content ", ""))
+	fmt.Println(color.BlueString("Assembling recordset Content... ", ""))
 	var results string
 	if c.IsSet("json") && c.Bool("json") {
 		recordset := &dns.RecordSet{
@@ -190,7 +184,7 @@ func cmdAddRecord(c *cli.Context) error {
 	}
 
 	if len(outputPath) > 1 {
-		fmt.Printf("Writing Output to %s ", outputPath)
+		//fmt.Println(color.GreenString("Writing output to %s", outputPath))
 		rsHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
@@ -201,6 +195,7 @@ func cmdAddRecord(c *cli.Context) error {
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
 		rsHandle.Sync()
+		fmt.Println(color.GreenString("Output written to %s", outputPath))
 	} else {
 		fmt.Fprintln(c.App.Writer, "")
 		fmt.Fprintln(c.App.Writer, results)

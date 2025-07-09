@@ -185,7 +185,7 @@ func cmdUpdateZone(c *cli.Context) error {
 		}
 	}
 
-	fmt.Println("Updating Recordsets ...")
+	fmt.Println("Updating Recordsets")
 	err = dnsClient.UpdateRecordSets(ctx, dns.UpdateRecordSetsRequest{
 		Zone:       zonename,
 		RecordSets: &dns.RecordSets{RecordSets: recordsetWorkList},
@@ -200,7 +200,7 @@ func cmdUpdateZone(c *cli.Context) error {
 	}
 
 	// Retrieve and display updated recordsets
-	fmt.Println("Retrieving Updated Recordsets ...")
+	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving updated records...\n"))
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 		Zone: zonename,
 	})
@@ -231,6 +231,7 @@ func cmdUpdateZone(c *cli.Context) error {
 			return cli.NewExitError(color.RedString("Failed to write zone output to file"), 1)
 		}
 		f.Sync()
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	} else {
 		fmt.Fprintln(c.App.Writer, "")
 		fmt.Fprintln(c.App.Writer, results)

@@ -208,7 +208,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		return nil
 	}
 
-	fmt.Printf("DEBUG: updating zone: '%s'\n", newZone.Zone)
+	//fmt.Printf("DEBUG: updating zone: '%s'\n", newZone.Zone)
 
 	fmt.Println("Updating Zone  ", "")
 	err = dns.ValidateZone(newZone)
@@ -236,7 +236,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		return nil
 	}
 	results := ""
-	fmt.Println("Assembling Zone Content ", "")
+	fmt.Fprintln(os.Stderr, color.BlueString("Assembling updated zone content...\n"))
 
 	// Format output either as JSON or table format
 	if c.IsSet("json") && c.Bool("json") {
@@ -251,7 +251,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 
 	// Write output to file or console
 	if len(outputPath) > 1 {
-		fmt.Printf("Writing Output to %s ", outputPath)
+		//fmt.Printf("Writing Output to %s ", outputPath)
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
@@ -262,6 +262,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
 		zfHandle.Sync()
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")

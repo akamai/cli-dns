@@ -47,7 +47,7 @@ func cmdRetrieveZone(c *cli.Context) error {
 
 	zonename := c.Args().First()
 
-	fmt.Fprintf(c.App.Writer, "Fetching zone...")
+	fmt.Fprintln(c.App.Writer, color.BlueString("Fetching zone..."))
 
 	// Fetch zone details
 	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
@@ -57,7 +57,7 @@ func cmdRetrieveZone(c *cli.Context) error {
 		return cli.NewExitError(color.RedString("Zone not found "), 1)
 	}
 
-	fmt.Fprintln(c.App.Writer, fmt.Sprintf(" [%s]", color.GreenString("OK")))
+	//fmt.Fprintln(c.App.Writer, fmt.Sprintf(" [%s]", color.GreenString("OK")))
 
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
 		// Print zone details only
