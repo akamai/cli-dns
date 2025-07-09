@@ -47,6 +47,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 
 	// Validate zonename argument
 	if zonename == "" {
+		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename required"), 1)
 	}
 
