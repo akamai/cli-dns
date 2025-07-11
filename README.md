@@ -764,7 +764,7 @@ NOTE: The CLI currently limits the number of zones in a submit request to 1000. 
 An example create submit request  would be as follows:
 
 ```
-$ akamai dns submit-bulkzones --create --contractid 1-3CV382 --groupid 18432 -file bulkcreate.json
+$ akamai dns submit-bulkzones --create --contractid 1-3CV382 --groupid 18432 --file bulkcreate.json
 Preparing bulk zones submit request
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -865,7 +865,7 @@ Flags:
 An example status check for a request would be as follows:
 
 ```
-$ akamai dns status-bulkzones -create -requestid 309679b5-1ab1-4837-9666-0019d1be891e -json
+$ akamai dns status-bulkzones --create --requestid 309679b5-1ab1-4837-9666-0019d1be891e --json
 Preparing bulk zones status request(s)
 Submitting Bulk Zones request 
 Submitting Bulk Zones request  ... [OK]
@@ -889,7 +889,7 @@ Assembling Bulk Zone Response Content ... [OK]
 An example status check for multiple request ids would be as follows:
 
 ```
-$ akamai dns status-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
+$ akamai dns status-bulkzones --create --requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 --requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
 Preparing bulk zones status request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -947,7 +947,7 @@ Flags:
 An example result retrieval for a request would be as follows:
 
 ```
-$ akamai dns result-bulkzones -delete -requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 -json
+$ akamai dns result-bulkzones --delete --requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 --json
 Preparing bulk zones result request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -971,7 +971,7 @@ Assembling Bulk Zone Response Content ... [OK]
 An example result retrieval for multiple request ids would be as follows:
 
 ```
-$ akamai dns result-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
+$ akamai dns result-bulkzones --create --requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 --requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
 Preparing bulk zones result request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
