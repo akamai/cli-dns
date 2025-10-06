@@ -98,7 +98,7 @@ func getRetryConfig() (*session.RetryConfig, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid AKAMAI_RETRY_WAIT_MAX: %w", err)
 		}
-		conf.RetryWaitMin = time.Duration(sec) * time.Second
+		conf.RetryWaitMax = time.Duration(sec) * time.Second
 	}
 
 	if excluded, ok := os.LookupEnv("AKAMAI_RETRY_EXCLUDED_ENDPOINTS"); ok {
