@@ -87,7 +87,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
 				return cli.NewExitError(color.RedString("zone doesn't exist"), 1)
 			}
-			return cli.NewExitError(fmt.Sprintf(color.RedString("failed to retrive master file: %s", err)), 1)
+			return cli.NewExitError(fmt.Sprintf(color.RedString("failed to retrieve master file: %s", err)), 1)
 		}
 		results = content
 	} else {
