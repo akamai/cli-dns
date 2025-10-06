@@ -15,282 +15,174 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/cli-dns/edgegrid"
+
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
 
 func cmdCreateZoneconfig(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
-	if err != nil {
-		return err
-	}
-	dnsv2.Init(config)
 
-	var (
-		zonename   string
-		outputPath string
-		contractid string
-		groupid    string
-		inputPath  string
-	)
-
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
-	akamai.StartSpinner("Preparing zone for create ", "")
-	zonename = c.Args().First()
-	newZone := &dnsv2.ZoneCreate{}
-	queryArgs := dnsv2.ZoneQueryString{}
+	// Initialize context and Edgegrid session
+	ctx := context.Background()
+	zonename := c.Args().First()
 
-	if c.IsSet("contractid") {
-		contractid = c.String("contractid")
-		newZone.ContractId = contractid
-		queryArgs.Contract = contractid
+	sess, err := edgegrid.InitializeSession(c)
+	if err != nil {
+		return fmt.Errorf("session failed %v", err)
 	}
-	if c.IsSet("groupid") {
-		groupid = c.String("groupid")
-		queryArgs.Group = groupid
-	}
-	if c.IsSet("file") {
-		inputPath = c.String("file")
-		inputPath = filepath.FromSlash(inputPath)
-	}
-	if c.IsSet("output") {
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
+
+	// Parse Flags
+	var (
+		inputPath  = c.String("file")
 		outputPath = c.String("output")
-		outputPath = filepath.FromSlash(outputPath)
-	}
-	if c.IsSet("file") {
-		// Read in json file
-		data, err := ioutil.ReadFile(inputPath)
+		contractID = c.String("contractid")
+		groupID    = c.String("groupid")
+	)
+
+	newZone := &dns.ZoneCreate{}
+
+	// Load zone config from file if specified
+	if inputPath != "" {
+		data, err := os.ReadFile(inputPath)
 		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
+			return cli.NewExitError(color.RedString("failed to read input file"), 1)
 		}
-		// set local variables and Object
-		err = json.Unmarshal(data, &newZone)
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Failed to parse json file content into zone object"), 1)
+		if err := json.Unmarshal(data, newZone); err != nil {
+			return cli.NewExitError(color.RedString("failed to parse JSON config"), 1)
 		}
+		//fmt.Printf("Debug: ContractID from JSON: '%s'\n", newZone.ContractID)
+
 		zonename = newZone.Zone
-		if len(newZone.ContractId) > 0 {
-			// overwrite command line arg
-			contractid = newZone.ContractId
-			queryArgs.Contract = contractid
+
+		if contractID == "" {
+			contractID = newZone.ContractID
 		}
 	} else if c.IsSet("type") {
-		// contractid already set
+		// Construct zone config from CLI flags
 		newZone.Zone = zonename
 		newZone.Type = strings.ToUpper(c.String("type"))
+		newZone.Comment = c.String("comment")
+		newZone.ContractID = c.String("contractid")
 		if c.IsSet("master") {
 			newZone.Masters = c.StringSlice("master")
 		}
-		if c.IsSet("comment") {
-			newZone.Comment = c.String("comment")
-		}
 		if c.IsSet("signandserve") {
 			newZone.SignAndServe = c.Bool("signandserve")
-		}
-		if c.IsSet("algorithm") {
 			newZone.SignAndServeAlgorithm = c.String("algorithm")
 		}
 		if c.IsSet("tsigname") {
-			newZone.TsigKey = &dnsv2.TSIGKey{}
-			newZone.TsigKey.Name = c.String("tsigname")
-			if c.IsSet("tsigalgorithm") {
-				newZone.TsigKey.Algorithm = c.String("tsigalgorithm")
-			}
-			if c.IsSet("tsigsecret") {
-				newZone.TsigKey.Secret = c.String("tsigsecret")
+			newZone.TSIGKey = &dns.TSIGKey{
+				Name:      c.String("tsigname"),
+				Algorithm: c.String("tsigalgorithm"),
+				Secret:    c.String("tsigsecret"),
 			}
 		}
-		if c.IsSet("target") {
-			newZone.Target = c.String("target")
-		}
-		if c.IsSet("endcustomerid") {
-			newZone.EndCustomerId = c.String("endcustomerid")
+		newZone.Target = c.String("target")
+		newZone.EndCustomerID = c.String("endcustomerid")
+
+		if contractID == "" {
+			contractID = newZone.ContractID
 		}
 	} else {
-		akamai.StopSpinnerFail()
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zone command line values or input file are required"), 1)
 	}
-	if len(contractid) == 0 {
-		akamai.StopSpinnerFail()
+
+	if contractID == "" {
 		return cli.NewExitError(color.RedString("contractid is required"), 1)
 	}
-	err = dnsv2.ValidateZone(newZone)
+
+	err = dns.ValidateZone(newZone)
 	if err != nil {
-		akamai.StopSpinnerFail()
 		cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid value provided for zone. Error: %s", err.Error())), 1)
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid zone value: %s", err)), 1)
 	}
 
-	akamai.StartSpinner("Creating Zone  ", "")
-	// See if already exists
-	zone, err := dnsv2.GetZone(zonename)
+	// Check if zone already exists
+	_, err = dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err == nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString("Zone already exists"), 1)
+		return cli.NewExitError(color.RedString("zone already exists"), 1)
 	} else {
-		if !dnsv2.IsConfigDNSError(err) || !err.(dnsv2.ConfigDNSError).NotFound() {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure while checking zone existance. Error: %s", err.Error())), 1)
+		if errors.Is(err, dns.ErrGetZone) {
+			return cli.NewExitError(color.RedString("failure while checking zone existance"), 1)
 		}
 	}
-	// create
-	err = newZone.Save(queryArgs)
-	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone create failed. Error: %s", err.Error())), 1)
-	}
-	if c.IsSet("initialize") && c.Bool("initialize") && strings.ToUpper(newZone.Type) == "PRIMARY" {
-		// Indirectly create NS and SOA records
-		err = newZone.SaveChangelist()
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Zone initialization failed. SOA and NS records need to be created "), 1)
-		}
-		err = newZone.SubmitChangelist()
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Zone create failed. Error: %s", err.Error())), 1)
-		}
-	}
-	akamai.StopSpinnerOk()
-	akamai.StartSpinner("Reading Zone Content  ", "")
-	zone, err = dnsv2.GetZone(zonename)
-	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read zone content. Error: %s", err.Error())), 1)
-	}
-	// suppress result output?
-	if c.IsSet("suppress") && c.Bool("suppress") {
-		return nil
-	}
-	results := ""
-	akamai.StartSpinner("Assembling Zone Content ", "")
-	// full output
-	if c.IsSet("json") && c.Bool("json") {
-		zjson, err := json.MarshalIndent(zone, "", "  ")
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Unable to display zone"), 1)
-		}
-		results = string(zjson)
-	} else {
-		results = renderZoneconfigTable(zone, c)
-	}
-	akamai.StopSpinnerOk()
 
-	if len(outputPath) > 1 {
-		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
-		// pathname and exists?
-		zfHandle, err := os.Create(outputPath)
+	// Create new zone
+	err = dnsClient.CreateZone(ctx, dns.CreateZoneRequest{
+		CreateZone:      newZone,
+		ZoneQueryString: dns.ZoneQueryString{Contract: contractID, Group: groupID},
+	})
+	if err != nil {
+		return cli.NewExitError(color.RedString("zone create failed: %s", err), 1)
+	}
+
+	// Optionally initialize zone with default records
+	if c.Bool("initialize") && strings.ToUpper(newZone.Type) == "PRIMARY" {
+		err = dnsClient.SaveChangeList(ctx, dns.SaveChangeListRequest{Zone: zonename})
 		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+			return cli.NewExitError(color.RedString("failed to initialize zone records"), 1)
 		}
-		defer zfHandle.Close()
-		_, err = zfHandle.WriteString(string(results))
+		err = dnsClient.SubmitChangeList(ctx, dns.SubmitChangeListRequest{Zone: zonename})
 		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
+			return cli.NewExitError(color.RedString("failed to initialize zone records during submit changelist "), 1)
 		}
-		zfHandle.Sync()
-		akamai.StopSpinnerOk()
+	}
+
+	// Fetch zone after creation
+	zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
+	if err != nil {
+		return cli.NewExitError(color.RedString(fmt.Sprintf("failed to read zone config: %v", err)), 1)
+	}
+
+	if c.Bool("suppress") {
 		return nil
+	}
+
+	// Format result for display
+	var result string
+	if c.Bool("json") {
+		b, err := json.MarshalIndent(zone.Zone, "", " ")
+		if err != nil {
+			return cli.NewExitError(color.RedString("failed to marshal zone output"), 1)
+		}
+		result = string(b)
+	} else {
+		result = renderZoneconfigTable(zone, c)
+	}
+
+	// Output to file or stdout
+	if outputPath != "" {
+		f, err := os.Create(filepath.FromSlash(outputPath))
+		if err != nil {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("failed to write output file: %v", err)), 1)
+		}
+		defer f.Close()
+		f.WriteString(result)
+		f.Sync()
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	} else {
 		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, results)
+		fmt.Fprintln(c.App.Writer, result)
 	}
 
 	return nil
-}
-
-func renderZoneconfigTable(zone *dnsv2.ZoneResponse, c *cli.Context) string {
-
-	//bold := color.New(color.FgWhite, color.Bold)
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Zone Configuration")
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetHeader([]string{"ZONE", "ATTRIBUTE", "VALUE"})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
-
-	if zone == nil {
-		rowData := []string{"No zone info to display", " ", " "}
-		table.Append(rowData)
-	} else {
-		zname := zone.Zone
-		ztype := zone.Type
-		table.Append([]string{zname, "Type", ztype})
-		if len(zone.Comment) > 0 {
-			table.Append([]string{" ", "Comment", zone.Comment})
-		}
-		if len(zone.ContractId) > 0 {
-			table.Append([]string{" ", "ContractId", zone.ContractId})
-		}
-		if strings.ToUpper(ztype) == "SECONDARY" {
-			if len(zone.Masters) > 0 {
-				masters := strings.Join(zone.Masters, " ,")
-				table.Append([]string{" ", "Masters", masters})
-			}
-			if zone.TsigKey != nil {
-				if len(zone.TsigKey.Name) > 0 {
-					table.Append([]string{" ", "TsigKey:Name", zone.TsigKey.Name})
-				}
-				if len(zone.TsigKey.Algorithm) > 0 {
-					table.Append([]string{" ", "TsigKey:Algorithm", zone.TsigKey.Algorithm})
-				}
-				if len(zone.TsigKey.Secret) > 0 {
-					table.Append([]string{" ", "TsigKey:Secret", zone.TsigKey.Secret})
-				}
-			}
-		}
-		if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
-			table.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
-			if len(zone.SignAndServeAlgorithm) > 0 {
-				table.Append([]string{" ", "SignAndServeAlgorithm", fmt.Sprintf("%s", zone.SignAndServeAlgorithm)})
-			}
-		}
-		if strings.ToUpper(ztype) == "ALIAS" {
-			table.Append([]string{" ", "Target", zone.Target})
-			table.Append([]string{" ", "AliasCount", strconv.FormatInt(zone.AliasCount, 10)})
-		}
-		table.Append([]string{" ", "ActivationState", zone.ActivationState})
-		if len(zone.LastActivationDate) > 0 {
-			table.Append([]string{" ", "LastActivationDate", zone.LastActivationDate})
-		}
-		if len(zone.LastModifiedDate) > 0 {
-			table.Append([]string{" ", "LastModifiedDate", zone.LastModifiedDate})
-		}
-		table.Append([]string{" ", "VersionId", zone.VersionId})
-	}
-	table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
 }

@@ -15,267 +15,190 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v1"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/cli-dns/edgegrid"
+
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
-func cmdCreateRecord(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+func cmdAddRecord(c *cli.Context) error {
+
+	//Validate postional arguments; record type and zone name
+	if c.NArg() < 2 {
+		cli.ShowCommandHelp(c, c.Command.Name)
+		return cli.NewExitError(color.RedString("record type and zonename are required"), 1)
+	}
+
+	recordType := strings.ToUpper(c.Args().Get(0))
+	zonename := strings.TrimSuffix(c.Args().Get(1), ".")
+
+	//validate required flags
+	if !c.IsSet("name") || !c.IsSet("rdata") || !c.IsSet("ttl") {
+		cli.ShowCommandHelp(c, c.Command.Name)
+		return cli.NewExitError(color.RedString("--name, --rdata and --ttl are required"), 1)
+	}
+
+	name := c.String("name")
+	if !strings.HasSuffix(name, "."+zonename) {
+		name = fmt.Sprintf("%s.%s", name, zonename)
+	}
+	if !strings.HasSuffix(name, "."+zonename) {
+		return cli.NewExitError(color.RedString("record name must be within the zone %s", zonename), 1)
+	}
+
+	ttl := c.Int("ttl")
+	rdata := c.StringSlice("rdata")
+	outputPath := ""
+	if c.IsSet("output") {
+		outputPath = filepath.FromSlash(c.String("output"))
+	}
+
+	//Set up Edgegrid session and DNS client
+	ctx := context.Background()
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dns.Config = config
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
-	hostname := c.Args().First()
-	if hostname == "" {
-		return cli.NewExitError(color.RedString("hostname is required"), 1)
-	}
-
-	err = validateFields(c.Command.Name, c)
+	// Check if the zone is an ALIAS zone
+	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
+		Zone: zonename,
+	})
 	if err != nil {
-		return err
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
 	}
 
-	akamai.StartSpinner(
-		fmt.Sprintf("Adding new %s record...", c.Command.Name),
-		fmt.Sprintf("Adding new %s record...... [%s]", c.Command.Name, color.GreenString("OK")),
-	)
-	zone, err := dns.GetZone(hostname)
+	if strings.EqualFold(zoneResp.Type, "ALIAS") {
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
+	}
+
+	// Define new record
+	newrecord := &dns.RecordBody{
+		RecordType: recordType,
+		Name:       name,
+		TTL:        ttl,
+		Target:     rdata,
+	}
+
+	// Check if record already exists
+	existing, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       zonename,
+		RecordType: newrecord.RecordType,
+		Name:       newrecord.Name,
+	})
+
+	if err == nil && existing.RecordType != "" {
+
+		fmt.Println("Record already exists, updating it instead...")
+
+		//Merge TTL and RDATA values if needed
+		ttlChanged := existing.TTL != newrecord.TTL
+
+		rdataMap := map[string]bool{}
+		for _, r := range existing.Target {
+			rdataMap[r] = true
+		}
+		for _, r := range newrecord.Target {
+			rdataMap[r] = true
+		}
+		mergedRdata := []string{}
+		for r := range rdataMap {
+			mergedRdata = append(mergedRdata, r)
+		}
+		sort.Strings(mergedRdata)
+
+		changed := ttlChanged || strings.Join(existing.Target, "") != strings.Join(mergedRdata, "")
+		if !changed {
+			fmt.Println(color.BlueString("No changes to update."))
+			return nil
+		}
+
+		// Update record with merged RDATA and TTL if record already exists
+		updateRecord := &dns.RecordBody{
+			Name:       existing.Name,
+			RecordType: existing.RecordType,
+			TTL:        newrecord.TTL,
+			Target:     mergedRdata,
+		}
+
+		err = dnsClient.UpdateRecord(ctx, dns.UpdateRecordRequest{
+			Zone:   zonename,
+			Record: updateRecord,
+		})
+		if err != nil {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset update failed. Error: %s", err)), 1)
+		}
+	} else {
+		// Create a new record
+		fmt.Println(color.BlueString("Creating new recordset..."))
+		err = dnsClient.CreateRecord(ctx, dns.CreateRecordRequest{
+			Zone:   zonename,
+			Record: newrecord,
+		})
+		if err != nil {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset create failed. Error: %s", err)), 1)
+		}
+	}
+
+	// Retrieve record after creation/update
+	record, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       zonename,
+		RecordType: newrecord.RecordType,
+		Name:       newrecord.Name,
+	})
 	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError("Unable to fetch zone", 1)
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read recordset content. Error: %s", err.Error())), 1)
+	}
+	if c.IsSet("suppress") && c.Bool("suppress") {
+		return nil
 	}
 
-	var active bool
-	if !c.IsSet("inactive") {
-		active = true
+	//Output the recordset
+	fmt.Println(color.BlueString("Assembling recordset Content... ", ""))
+	var results string
+	if c.IsSet("json") && c.Bool("json") {
+		recordset := &dns.RecordSet{
+			Name:  record.Name,
+			Type:  record.RecordType,
+			TTL:   record.TTL,
+			Rdata: record.Target,
+		}
+		zjson, err := json.MarshalIndent(recordset, "", "  ")
+		if err != nil {
+			return cli.NewExitError(color.RedString("Unable to marshal recordset"), 1)
+		}
+		results = string(zjson)
+	} else {
+		results = renderRecordsetTable(zonename, record)
 	}
 
-	var record dns.DNSRecord
-
-	switch c.Command.Name {
-	case "A":
-		record = dns.NewARecord()
-		record.(*dns.ARecord).Active = active
-		record.(*dns.ARecord).Name = c.String("name")
-		record.(*dns.ARecord).Target = c.String("target")
-		record.(*dns.ARecord).TTL = c.Int("ttl")
-	case "AAAA":
-		record = dns.NewAaaaRecord()
-		record.(*dns.AaaaRecord).Active = active
-		record.(*dns.AaaaRecord).Name = c.String("name")
-		record.(*dns.AaaaRecord).Target = c.String("target")
-		record.(*dns.AaaaRecord).TTL = c.Int("ttl")
-	case "AFSDB":
-		record = dns.NewAfsdbRecord()
-		record.(*dns.AfsdbRecord).Active = active
-		record.(*dns.AfsdbRecord).Name = c.String("name")
-		record.(*dns.AfsdbRecord).Subtype = c.Int("subtype")
-		record.(*dns.AfsdbRecord).Target = c.String("target")
-		record.(*dns.AfsdbRecord).TTL = c.Int("ttl")
-	case "CNAME":
-		record = dns.NewCnameRecord()
-		record.(*dns.CnameRecord).Active = active
-		record.(*dns.CnameRecord).Name = c.String("name")
-		record.(*dns.CnameRecord).Target = c.String("target")
-		record.(*dns.CnameRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.CnameRecord).Target += "."
+	if len(outputPath) > 1 {
+		//fmt.Println(color.GreenString("Writing output to %s", outputPath))
+		rsHandle, err := os.Create(outputPath)
+		if err != nil {
+			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
-	case "DNSKEY":
-		record = dns.NewDnskeyRecord()
-		record.(*dns.DnskeyRecord).Active = active
-		record.(*dns.DnskeyRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.DnskeyRecord).Flags = c.Int("flags")
-		record.(*dns.DnskeyRecord).Key = c.String("key")
-		record.(*dns.DnskeyRecord).Name = c.String("name")
-		record.(*dns.DnskeyRecord).Protocol = c.Int("protocol")
-		record.(*dns.DnskeyRecord).TTL = c.Int("ttl")
-	case "DS":
-		record = dns.NewDsRecord()
-		record.(*dns.DsRecord).Active = active
-		record.(*dns.DsRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.DsRecord).Digest = c.String("digest")
-		record.(*dns.DsRecord).DigestType = c.Int("digest-type")
-		record.(*dns.DsRecord).Keytag = c.Int("keytag")
-		record.(*dns.DsRecord).Name = c.String("name")
-		record.(*dns.DsRecord).TTL = c.Int("ttl")
-	case "HINFO":
-		record = dns.NewHinfoRecord()
-		record.(*dns.HinfoRecord).Active = active
-		record.(*dns.HinfoRecord).Hardware = c.String("hardware")
-		record.(*dns.HinfoRecord).Name = c.String("name")
-		record.(*dns.HinfoRecord).Software = c.String("software")
-		record.(*dns.HinfoRecord).TTL = c.Int("ttl")
-	case "LOC":
-		record = dns.NewLocRecord()
-		record.(*dns.LocRecord).Active = active
-		record.(*dns.LocRecord).Name = c.String("name")
-		record.(*dns.LocRecord).Target = c.String("target")
-		record.(*dns.LocRecord).TTL = c.Int("ttl")
-	case "MX":
-		record = dns.NewMxRecord()
-		record.(*dns.MxRecord).Active = active
-		record.(*dns.MxRecord).Name = c.String("name")
-		record.(*dns.MxRecord).Priority = c.Int("priority")
-		record.(*dns.MxRecord).Target = c.String("target")
-		record.(*dns.MxRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.MxRecord).Target += "."
+		defer rsHandle.Close()
+		_, err = rsHandle.WriteString(results)
+		if err != nil {
+			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
-	case "NAPTR":
-		record = dns.NewNaptrRecord()
-		record.(*dns.NaptrRecord).Active = active
-		record.(*dns.NaptrRecord).Flags = c.String("flags")
-		record.(*dns.NaptrRecord).Name = c.String("name")
-		record.(*dns.NaptrRecord).Order = uint16(c.Uint("order"))
-		record.(*dns.NaptrRecord).Preference = uint16(c.Uint("preference"))
-		record.(*dns.NaptrRecord).Regexp = c.String("regexp")
-		record.(*dns.NaptrRecord).Replacement = c.String("replacement")
-		record.(*dns.NaptrRecord).Service = c.String("service")
-		record.(*dns.NaptrRecord).TTL = c.Int("ttl")
-	case "NS":
-		record = dns.NewNsRecord()
-		record.(*dns.NsRecord).Active = active
-		record.(*dns.NsRecord).Name = c.String("name")
-		record.(*dns.NsRecord).Target = c.String("target")
-		record.(*dns.NsRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.NsRecord).Target += "."
-		}
-	case "NSEC3":
-		record = dns.NewNsec3Record()
-		record.(*dns.Nsec3Record).Active = active
-		record.(*dns.Nsec3Record).Algorithm = c.Int("algorithm")
-		record.(*dns.Nsec3Record).Flags = c.Int("flags")
-		record.(*dns.Nsec3Record).Iterations = c.Int("iterations")
-		record.(*dns.Nsec3Record).Name = c.String("name")
-		record.(*dns.Nsec3Record).NextHashedOwnerName = c.String("next-hashed-owner-name")
-		record.(*dns.Nsec3Record).Salt = c.String("salt")
-		record.(*dns.Nsec3Record).TTL = c.Int("ttl")
-		record.(*dns.Nsec3Record).TypeBitmaps = c.String("type-bitmaps")
-	case "NSEC3PARAM":
-		record = dns.NewNsec3paramRecord()
-		record.(*dns.Nsec3paramRecord).Active = active
-		record.(*dns.Nsec3paramRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.Nsec3paramRecord).Flags = c.Int("flags")
-		record.(*dns.Nsec3paramRecord).Iterations = c.Int("iterations")
-		record.(*dns.Nsec3paramRecord).Name = c.String("name")
-		record.(*dns.Nsec3paramRecord).Salt = c.String("salt")
-		record.(*dns.Nsec3paramRecord).TTL = c.Int("ttl")
-	case "PTR":
-		record = dns.NewPtrRecord()
-		record.(*dns.PtrRecord).Active = active
-		record.(*dns.PtrRecord).Name = c.String("name")
-		record.(*dns.PtrRecord).Target = c.String("target")
-		record.(*dns.PtrRecord).TTL = c.Int("ttl")
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.PtrRecord).Target += "."
-		}
-	case "RP":
-		record = dns.NewRpRecord()
-		record.(*dns.RpRecord).Active = active
-		record.(*dns.RpRecord).Mailbox = c.String("mailbot")
-		record.(*dns.RpRecord).Name = c.String("name")
-		record.(*dns.RpRecord).TTL = c.Int("ttl")
-		record.(*dns.RpRecord).Txt = c.String("txt")
-	case "RRSIG":
-		record = dns.NewRrsigRecord()
-		record.(*dns.RrsigRecord).Active = active
-		record.(*dns.RrsigRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.RrsigRecord).Expiration = c.String("expiration")
-		record.(*dns.RrsigRecord).Inception = c.String("inception")
-		record.(*dns.RrsigRecord).Keytag = c.Int("keytag")
-		record.(*dns.RrsigRecord).Labels = c.Int("labels")
-		record.(*dns.RrsigRecord).Name = c.String("name")
-		record.(*dns.RrsigRecord).OriginalTTL = c.Int("original-ttl")
-		record.(*dns.RrsigRecord).Signature = c.String("signature")
-		record.(*dns.RrsigRecord).Signer = c.String("signer")
-		record.(*dns.RrsigRecord).TTL = c.Int("ttl")
-		record.(*dns.RrsigRecord).TypeCovered = c.String("type-covered")
-	case "SOA":
-		record = dns.NewSoaRecord()
-		record.(*dns.SoaRecord).Contact = c.String("contact")
-		record.(*dns.SoaRecord).Expire = c.Int("expire")
-		record.(*dns.SoaRecord).Minimum = c.Uint("minimum")
-		record.(*dns.SoaRecord).Originserver = c.String("originserver")
-		record.(*dns.SoaRecord).Refresh = c.Int("refresh")
-		record.(*dns.SoaRecord).Retry = c.Int("retry")
-		record.(*dns.SoaRecord).Serial = c.Uint("serial")
-		record.(*dns.SoaRecord).TTL = c.Int("ttl")
-	case "SPF":
-		record = dns.NewSpfRecord()
-		record.(*dns.SpfRecord).Active = active
-		record.(*dns.SpfRecord).Name = c.String("name")
-		record.(*dns.SpfRecord).Target = c.String("target")
-		record.(*dns.SpfRecord).TTL = c.Int("ttl")
-	case "SRV":
-		record = dns.NewSrvRecord()
-		record.(*dns.SrvRecord).Active = active
-		record.(*dns.SrvRecord).Name = c.String("name")
-		record.(*dns.SrvRecord).Port = uint16(c.Uint("port"))
-		record.(*dns.SrvRecord).Priority = c.Int("priority")
-		record.(*dns.SrvRecord).Target = c.String("target")
-		record.(*dns.SrvRecord).TTL = c.Int("ttl")
-		record.(*dns.SrvRecord).Weight = uint16(c.Uint("weight"))
-
-		if !strings.HasSuffix(c.String("target"), ".") {
-			record.(*dns.SrvRecord).Target += "."
-		}
-	case "SSHFP":
-		record = dns.NewSshfpRecord()
-		record.(*dns.SshfpRecord).Active = active
-		record.(*dns.SshfpRecord).Algorithm = c.Int("algorithm")
-		record.(*dns.SshfpRecord).Fingerprint = c.String("fingerprint")
-		record.(*dns.SshfpRecord).FingerprintType = c.Int("fingerprint-type")
-		record.(*dns.SshfpRecord).Name = c.String("name")
-		record.(*dns.SshfpRecord).TTL = c.Int("ttl")
-	case "TXT":
-		record = dns.NewTxtRecord()
-		record.(*dns.TxtRecord).Active = active
-		record.(*dns.TxtRecord).Name = c.String("name")
-		record.(*dns.TxtRecord).Target = c.String("target")
-		record.(*dns.TxtRecord).TTL = c.Int("ttl")
-	}
-
-	zone.AddRecord(record)
-	err = zone.Save()
-	if err != nil {
-		akamai.StopSpinnerFail()
-		fmt.Printf("%#v\n", err)
-		return cli.NewExitError(err.Error(), 1)
-	}
-
-	akamai.StopSpinnerOk()
-	return nil
-}
-
-func validateFields(recordType string, c *cli.Context) error {
-	var missing []string = make([]string, 0)
-	for option, settings := range recordOptions[recordType] {
-		if settings.required {
-			if !c.IsSet(option) {
-				missing = append(missing, option)
-			}
-		}
-	}
-
-	if len(missing) != 0 {
-		error := "Missing required options: \n"
-		for _, option := range missing {
-			error += "  " + fmt.Sprintf("--%s", option) + "\n"
-		}
-
-		return cli.NewExitError(error, 1)
+		rsHandle.Sync()
+		fmt.Println(color.GreenString("Output written to %s", outputPath))
+	} else {
+		fmt.Fprintln(c.App.Writer, "")
+		fmt.Fprintln(c.App.Writer, results)
 	}
 
 	return nil

@@ -25,7 +25,7 @@ for your system, or by cloning this repository and compiling it yourself.
 
 ### Compiling from Source
 
-If you want to compile the package from source, you will need Go 1.18 or later installed:
+If you want to compile the package from source, you will need Go 1.23 or later installed:
 
 1. Create a clone of the target repository:
    `git clone https://github.com/akamai/cli-dns.git`
@@ -92,9 +92,7 @@ Commands are grouped into several categories.
 
 *-bulkzones commands provide the ability to submit and monitor bulk zone operations.
 
-*-zone and *-record commands provide a more constrained scope of control, treating the zone and records as a single entity. These commands provide backward compatibility with earlier releases of the package.
-
-NOTE: The *-zone and *-record commands utilize and older version of the Edge DNS API and do not support zones with newer record types. These commands have been deprecated and will be removed from a future release.
+*-zone and *-record commands provide a more constrained scope of control, treating the zone and records as a single entity. 
 
 ### Listing Zone Configurations
 
@@ -195,7 +193,7 @@ would result in the following output:
 To retrieve the master zone file and output to the console, an example would be:
 
 ```
-$ akamai dns retrieve-zoneconfig xxx_primary_test.com -dns
+$ akamai dns retrieve-zoneconfig xxx_primary_test.com --dns
 Retrieving Zone
 Retrieving Zone  ... [OK]
 
@@ -358,7 +356,7 @@ Zone Configuration
 To update the master zone file (previously retrieved), an example would be:
 
 ```
-$ akamai dns update-zoneconfig xxx_primary_test.com -dns -file ./master_file
+$ akamai dns update-zoneconfig xxx_primary_test.com --dns --file ./master_file
 Preparing zone for update
 Updating Master Zone File
 Updating Master Zone File ... [OK]
@@ -473,6 +471,7 @@ and result on the following result:
       ]
     }
   ]
+}
 ```
 
 ### Creating Multiple Zone Recordsets
@@ -753,7 +752,7 @@ Flags:
    --output FILE       Output command results to FILE
    --suppress          Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
    --contractid ID     Contract ID. Required for create.
-   --groupid ID        Group ID. Optional for create.
+   --groupid ID        Group ID. Required for create.
    --bypasszonesafety  Bypass zone safety check. Optional for delete.
    --create            Bulk zone create operation.
    --delete            Bulk zone delete operation.
@@ -765,7 +764,7 @@ NOTE: The CLI currently limits the number of zones in a submit request to 1000. 
 An example create submit request  would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default submit-bulkzones -create -contractid 1-3CV382 -groupid 18432 -file bulkcreate.json
+$ akamai dns submit-bulkzones --create --contractid 1-3CV382 --groupid 18432 --file bulkcreate.json
 Preparing bulk zones submit request
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -815,7 +814,7 @@ where the file `./bulkcreate.json` contains:
 An example delete submit request would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default submit-bulkzones -delete -file bulkdelete.json
+$ akamai dns submit-bulkzones --delete --file bulkdelete.json
 Preparing bulk zones submit request
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -866,7 +865,7 @@ Flags:
 An example status check for a request would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default status-bulkzones -create -requestid 309679b5-1ab1-4837-9666-0019d1be891e -json
+$ akamai dns status-bulkzones --create --requestid 309679b5-1ab1-4837-9666-0019d1be891e --json
 Preparing bulk zones status request(s)
 Submitting Bulk Zones request 
 Submitting Bulk Zones request  ... [OK]
@@ -890,7 +889,7 @@ Assembling Bulk Zone Response Content ... [OK]
 An example status check for multiple request ids would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default status-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
+$ akamai dns status-bulkzones --create --requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 --requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
 Preparing bulk zones status request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -948,7 +947,7 @@ Flags:
 An example result retrieval for a request would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default result-bulkzones -delete -requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 -json
+$ akamai dns result-bulkzones --delete --requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 --json
 Preparing bulk zones result request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -972,7 +971,7 @@ Assembling Bulk Zone Response Content ... [OK]
 An example result retrieval for multiple request ids would be as follows:
 
 ```
-$ akamai dns  --edgerc ~/.edgerc --section default result-bulkzones -create -requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 -requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
+$ akamai dns result-bulkzones --create --requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 --requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
 Preparing bulk zones result request(s)
 Submitting Bulk Zones request
 Submitting Bulk Zones request  ... [OK]
@@ -1007,8 +1006,6 @@ Assembling Bulk Zone Response Content ... [OK]
 
 ### Retrieving a Zone
 
-NOTE: This sub command has been deprecated and will be removed in a future release.
-
 To retrieve a Zone use the `retrieve-zone` command:
 
 ```
@@ -1029,32 +1026,42 @@ $ akamai dns retrieve-zone example.org --filter A --filter AAAA --json
 ```
 ```json
 {
-  "token": "9218376e14c2797e0d06e8d2f918d45f",
-  "zone": {
-    "name": "example.com",
-    "a": [
-      {
-        "name": "www",
-        "ttl": 3600,
-        "active": true,
-        "target": "192.0.2.1"
-      }
-    ],
-    "aaaa": [
-      {
-        "name": "www",
-        "ttl": 3600,
-        "active": true,
-        "target": "2001:db8:0:0:0:0:0:1"
-      }
-    ]
+ "records": [
+  {
+   "name": "a.example.org",
+   "type": "A",
+   "ttl": 900,
+   "rdata": [
+    "10.0.0.10",
+    "10.0.0.20"
+   ]
+  },
+  {
+   "name": "test.example.org",
+   "type": "AAAA",
+   "ttl": 600,
+   "rdata": [
+    "2001:db8:0:0:0:0:0:1"
+   ]
   }
+ ],
+ "zone": {
+  "zone": "example.org",
+  "type": "PRIMARY",
+  "comment": "primary zone config",
+  "signAndServe": true,
+  "signAndServeAlgorithm": "RSA_SHA256",
+  "contractId": "1-1AB123",
+  "activationState": "PENDING",
+  "lastActivationDate": "2025-07-02T07:57:34.146414Z",
+  "lastModifiedBy": "xxxxx",
+  "lastModifiedDate": "2025-07-02T09:28:38.141705Z",
+  "versionId": "a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e"
+ }
 }
 ```
 
 ### Update a Zone
-
-NOTE: This sub command has been deprecated and will be removed in a future release.
 
 Update a zone using `akamai dns update-zone`. This command allows you to input either
 a [Edge DNS JSON payload](https://developer.akamai.com/api/luna/config-dns/resources.html#addormodifyazone), or a standard DNS zone file.
@@ -1091,15 +1098,11 @@ $ akamai dns update-zone example.org --overwrite -f example.org.zone.json
 
 To add a new DNS record use `akamai dns add-record <record type>`. Each setting for the record is a flag, for example to add a `CNAME` record:
 
-NOTE: This sub command has been deprecated and will be removed in a future release.
-
 ```
-$ akamai dns add-record CNAME example.org --name www --target example.org --ttl 3600
+$ akamai dns add-record CNAME example.org --name www --rdata example.org --ttl 3600
 ```
 
 ### Remove a Record
-
-NOTE: This sub command has been deprecated and will be removed in a future release.
 
 Use `akamai dns rm-record <record type>` to remove one or more records matching the given flags.
 

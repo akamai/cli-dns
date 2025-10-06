@@ -1,3 +1,9 @@
 vendor/
 akamai-dns
 build/
+.env
+*.env
+.env.*
+.DS_Store
+.edgerc
+
