@@ -97,7 +97,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
 				return cli.NewExitError(color.RedString("zone does not exist"), 1)
 			}
-			return cli.NewExitError(fmt.Sprintf(color.RedString("zailed to retrieve zone: %s", err)), 1)
+			return cli.NewExitError(fmt.Sprintf(color.RedString("failed to retrieve zone: %s", err)), 1)
 		}*/
 
 		// Output as JSON or table format
