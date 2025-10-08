@@ -15,24 +15,30 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdUpdateZoneconfig(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+
+	// Initialize context and Edgegrid session
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	var (
 		zonename           string
@@ -41,14 +47,18 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		masterZoneFileData string
 	)
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
-	akamai.StartSpinner("Preparing zone for update ", "")
+	fmt.Println("Preparing zone for update ", "")
+
 	zonename = c.Args().First()
-	newZone := &dnsv2.ZoneCreate{}
+
+	// New zone struct to hold zone data for update
+	newZone := &dns.ZoneCreate{}
 
 	masterfile := c.IsSet("dns") && c.Bool("dns")
 
@@ -59,7 +69,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 			fmt.Println("Warning: Zone Field and File args are defined. Field values will be ignored!")
 		}
 	} else if !c.IsSet("type") && !masterfile {
-		akamai.StopSpinnerFail()
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Either zone command line field values or input file are required"), 1)
 	}
@@ -70,166 +79,190 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	}
 
 	if c.IsSet("file") {
-		// Read in json file
-		data, err := ioutil.ReadFile(inputPath)
+		data, err := os.ReadFile(inputPath)
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
 		}
+		// Update master zone file if dns flag set
 		if masterfile {
 			masterZoneFileData = string(data)
-			if config.MaxBody < len(masterZoneFileData) {
-				if len(masterZoneFileData) > httpMaxBody {
-					// limited by config.MaxBody max (int)
-					akamai.StopSpinnerFail()
-					return cli.NewExitError(color.RedString("Master Zone File size too large to process"), 1)
-				}
-				if config.MaxBody < len(masterZoneFileData) {
-					config.MaxBody = len(masterZoneFileData)
-				}
+			if len(masterZoneFileData) > httpMaxBody {
+				return cli.NewExitError(color.RedString("Master Zone File size too large to process"), 1)
 			}
 		} else {
-			// set local variables and Object
 			err = json.Unmarshal(data, &newZone)
 			if err != nil {
-				akamai.StopSpinnerFail()
-				return cli.NewExitError(color.RedString("Failed to parse json file content into zone object"), 1)
+				return cli.NewExitError(color.RedString("Failed to parse json file content into zone object %s", err), 1)
 			}
-			zonename = newZone.Zone
+			// Validate required fields from JSON
+			if newZone.Zone != "" {
+				zonename = strings.TrimSpace(strings.ToLower(newZone.Zone))
+			} else {
+				return cli.NewExitError(color.RedString("zone is missing in JSON file"), 1)
+			}
+			if newZone.Type != "" {
+				newZone.Type = strings.ToUpper(newZone.Type)
+			}
+			if newZone.SignAndServeAlgorithm != "" {
+				newZone.SignAndServeAlgorithm = strings.ToUpper(newZone.SignAndServeAlgorithm) // Uppercase signAndServeAlgorithm
+			}
 		}
 	}
 
-	// init the library
-	dnsv2.Init(config)
+	if zonename == "" {
+		return cli.NewExitError(color.RedString("zone name is required"), 1)
+	}
 
-	// See if already exists
-	zone, err := dnsv2.GetZone(zonename)
+	// Fetch zone
+	zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err != nil {
-		if dnsv2.IsConfigDNSError(err) && err.(dnsv2.ConfigDNSError).NotFound() {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Zone already exists"), 1)
-		} else {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure while checking zone existance. Error: %s", err.Error())), 1)
-		}
+		return cli.NewExitError(color.RedString("failure while checking zone existance %s", err), 1)
+	}
+	if zone == nil {
+		return cli.NewExitError(color.RedString("zone retrieval returned nil!"), 1)
 	}
 
+	zoneJson, err := json.MarshalIndent(zone, "", "  ")
+	if err != nil {
+		fmt.Printf("Failed to marshal zone for debug: %v\n", err)
+	} else {
+		fmt.Printf("Retrieved Zone:\n%s\n", string(zoneJson))
+	}
+
+	/*payload, _ := json.MarshalIndent(newZone, "", "  ")
+	fmt.Println("Payload to be sent:\n", string(payload))*/
+
+	// Handling update using CLI flags
 	if c.IsSet("type") && !c.IsSet("file") {
 		newZone.Zone = zonename
 		newZone.Type = strings.ToUpper(c.String("type"))
+
 		if c.IsSet("contractid") {
-			newZone.ContractId = c.String("contractid")
-		} else {
-			newZone.ContractId = zone.ContractId
+			newZone.ContractID = c.String("contractid")
+		} else if zone != nil {
+			newZone.ContractID = zone.ContractID
 		}
 		if c.IsSet("master") {
 			newZone.Masters = c.StringSlice("master")
-		} else {
+		} else if zone != nil {
 			newZone.Masters = zone.Masters
 		}
 		if c.IsSet("comment") {
 			newZone.Comment = c.String("comment")
-		} else {
+		} else if zone != nil {
 			newZone.Comment = zone.Comment
 		}
 		if c.IsSet("signandserve") {
 			newZone.SignAndServe = c.Bool("signandserve")
-		} else {
+		} else if zone != nil {
 			newZone.SignAndServe = zone.SignAndServe
 		}
 		if c.IsSet("algorithm") {
 			newZone.SignAndServeAlgorithm = c.String("algorithm")
-		} else {
+		} else if zone != nil {
 			newZone.SignAndServeAlgorithm = zone.SignAndServeAlgorithm
 		}
-		newZone.TsigKey = zone.TsigKey
-		if c.IsSet("tsigname") {
-			newZone.TsigKey.Name = c.String("tsigname")
-		}
-		if c.IsSet("tsigalgorithm") {
-			newZone.TsigKey.Algorithm = c.String("tsigalgorithm")
-		}
-		if c.IsSet("tsigsecret") {
-			newZone.TsigKey.Secret = c.String("tsigsecret")
+		if (zone != nil && zone.TSIGKey != nil) || c.IsSet("tsigname") || c.IsSet("tsigalgorithm") || c.IsSet("tsigsecret") {
+			if zone.TSIGKey != nil {
+				newZone.TSIGKey = &dns.TSIGKey{
+					Name:      zone.TSIGKey.Name,
+					Algorithm: zone.TSIGKey.Algorithm,
+					Secret:    zone.TSIGKey.Secret,
+				}
+			} else {
+				newZone.TSIGKey = &dns.TSIGKey{}
+			}
+
+			if c.IsSet("tsigname") {
+				newZone.TSIGKey.Name = c.String("tsigname")
+			}
+			if c.IsSet("tsigalgorithm") {
+				newZone.TSIGKey.Algorithm = c.String("tsigalgorithm")
+			}
+			if c.IsSet("tsigsecret") {
+				newZone.TSIGKey.Secret = c.String("tsigsecret")
+			}
 		}
 		if c.IsSet("target") {
 			newZone.Target = c.String("target")
-		} else {
+		} else if zone != nil {
 			newZone.Target = zone.Target
 		}
 		if c.IsSet("endcustomerid") {
-			newZone.EndCustomerId = c.String("endcustomerid")
-		} else {
-			newZone.EndCustomerId = zone.EndCustomerId
+			newZone.EndCustomerID = c.String("endcustomerid")
+		} else if zone != nil {
+			newZone.EndCustomerID = zone.EndCustomerID
 		}
 	}
 
+	// Updating master zone file
 	if masterfile {
-		akamai.StartSpinner("Updating Master Zone File ", "")
-		if err = dnsv2.PostMasterZoneFile(zonename, masterZoneFileData); err != nil {
-			akamai.StopSpinnerFail()
+		fmt.Println("Updating Master Zone File ", "")
+		err = dnsClient.PostMasterZoneFile(ctx, dns.PostMasterZoneFileRequest{
+			Zone:     zonename,
+			FileData: masterZoneFileData,
+		})
+		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Master Zone File update failed. Error: %s", err.Error())), 1)
 		}
-		akamai.StopSpinnerOk()
 		return nil
 	}
 
-	akamai.StartSpinner("Updating Zone  ", "")
-	err = dnsv2.ValidateZone(newZone)
+	//fmt.Printf("DEBUG: updating zone: '%s'\n", newZone.Zone)
+
+	fmt.Println("Updating Zone  ", "")
+	err = dns.ValidateZone(newZone)
+
 	if err != nil {
-		akamai.StopSpinnerFail()
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid value provided for zone. Error: %s", err.Error())), 1)
 	}
-	err = newZone.Update(dnsv2.ZoneQueryString{})
+
+	// Updating zone
+	err = dnsClient.UpdateZone(ctx, dns.UpdateZoneRequest{
+		CreateZone: newZone,
+	})
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone update failed. Error: %s", err.Error())), 1)
 	}
-	akamai.StopSpinnerOk()
-	akamai.StartSpinner("Reading Zone Content  ", "")
-	zone, err = dnsv2.GetZone(zonename)
+
+	fmt.Println("Reading Zone Content  ", "")
+	zone, err = dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read zone content. Error: %s", err.Error())), 1)
 	}
-	akamai.StopSpinnerOk()
 
-	// suppress result output?
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
 	results := ""
-	akamai.StartSpinner("Assembling Zone Content ", "")
-	// full output
+	fmt.Fprintln(os.Stderr, color.BlueString("Assembling updated zone content...\n"))
+
+	// Format output either as JSON or table format
 	if c.IsSet("json") && c.Bool("json") {
 		zjson, err := json.MarshalIndent(zone, "", "  ")
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to display zone"), 1)
 		}
 		results = string(zjson)
 	} else {
 		results = renderZoneconfigTable(zone, c)
 	}
-	akamai.StopSpinnerOk()
 
+	// Write output to file or console
 	if len(outputPath) > 1 {
-		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
-		// pathname and exists?
+		//fmt.Printf("Writing Output to %s ", outputPath)
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
 		defer zfHandle.Close()
 		_, err = zfHandle.WriteString(string(results))
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
 		zfHandle.Sync()
-		akamai.StopSpinnerOk()
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")

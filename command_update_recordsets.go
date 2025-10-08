@@ -15,27 +15,31 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdUpdateRecordsets(c *cli.Context) error {
 
-	config, err := akamai.GetEdgegridConfig(c)
+	// Initialize context and Edgegrid session
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dnsv2.Init(config)
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	var (
 		zonename   string
@@ -43,12 +47,24 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		inputPath  string
 	)
 
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
 	zonename = c.Args().First()
+
+	// Check if the zone is an ALIAS zone
+	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
+		Zone: zonename,
+	})
+	if err != nil {
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+	}
+	if strings.EqualFold(zoneResp.Type, "ALIAS") {
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and does not have recordsets", zonename)), 1)
+	}
 
 	if c.IsSet("output") {
 		outputPath = c.String("output")
@@ -60,47 +76,49 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 	} else {
 		return cli.NewExitError(color.RedString("Input file is required"), 1)
 	}
-	akamai.StartSpinner("Fetching Recordset data ", "")
-	// Read in json file
-	data, err := ioutil.ReadFile(inputPath)
+
+	// Parse input JSON file
+	data, err := os.ReadFile(filepath.FromSlash(inputPath))
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString("Failed to read input file"), 1)
 	}
-	recordsets := &dnsv2.Recordsets{}
+	recordsets := &dns.RecordSets{}
 	err = json.Unmarshal(data, recordsets)
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString("Failed to parse json file content"), 1)
 	}
-	// NOTE: UPDATE REPLACES ALL RECORDSETS
-	var recordsetWorkList []dnsv2.Recordset
+
+	// Determine update mode (overwrite or update existing recordset)
+	var recordsetWorkList []dns.RecordSet
+
 	if c.IsSet("overwrite") && c.Bool("overwrite") {
-		recordsets := &dnsv2.Recordsets{}
+		recordsets := &dns.RecordSets{}
 		err = json.Unmarshal(data, recordsets)
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Failed to parse json file content"), 1)
 		}
-		recordsetWorkList = recordsets.Recordsets
+		recordsetWorkList = recordsets.RecordSets
 	} else {
-		akamai.StartSpinner("Retrieving Existing Recordsets ", "")
-		queryArgs := dnsv2.RecordsetQueryArgs{}
-		queryArgs.ShowAll = true
-		recordsetResp, err := dnsv2.GetRecordsets(zonename, queryArgs)
+		fmt.Println("Retrieving Existing Recordsets ", "")
+		resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
+			Zone: zonename,
+			QueryArgs: &dns.RecordSetQueryArgs{
+				ShowAll: true,
+			},
+		})
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
 		}
-		akamai.StopSpinnerOk()
-		akamai.StartSpinner("Processing Updated Recordsets ", "")
-		recordsetWorkList = recordsetResp.Recordsets
+
+		fmt.Println("Processing Updated Recordsets ", "")
+		recordsetWorkList = resp.RecordSets
+
+		// Merge changes from input file
 		soaInSet := false
 		soaIndex := 0
-		for _, crs := range recordsets.Recordsets {
-			// for each updated recordset
+
+		for _, crs := range recordsets.RecordSets {
 			for i, rs := range recordsetWorkList {
-				// walk the full list and relace
 				if crs.Name == rs.Name && crs.Type == rs.Type {
 					recordsetWorkList[i] = crs
 					if crs.Type == "SOA" {
@@ -111,66 +129,68 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 				}
 			}
 		}
+
+		// Auto-increment SOA serial if not explicitly set
 		if !soaInSet && (soaIndex > 0 || recordsetWorkList[soaIndex].Type == "SOA") {
-			// Serial needs to be incremented
 			soavals := strings.Split(recordsetWorkList[soaIndex].Rdata[0], " ")
 			v, _ := strconv.Atoi(soavals[2])
 			soavals[2] = strconv.Itoa(v + 1)
 			recordsetWorkList[soaIndex].Rdata[0] = strings.Join(soavals, " ")
 		}
-		akamai.StopSpinnerOk()
 	}
-	akamai.StartSpinner("Updating Recordsets ", "")
-	recordsets.Recordsets = recordsetWorkList
-	err = recordsets.Update(zonename, true)
+
+	// Submit recordset updates
+	fmt.Println("Updating Recordsets ", "")
+	recordsets.RecordSets = recordsetWorkList
+	err = dnsClient.UpdateRecordSets(ctx, dns.UpdateRecordSetsRequest{
+		Zone:       zonename,
+		RecordSets: &dns.RecordSets{RecordSets: recordsetWorkList},
+		RecLock:    []bool{true},
+	})
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset update failed. Error: %s", err.Error())), 1)
 	}
-	akamai.StopSpinnerOk()
 
 	if c.IsSet("suppress") && c.Bool("suppress") {
-
 		return nil
-
 	}
-	akamai.StartSpinner("Retrieving Full Recordsets List ", "")
-	recordsetResp, err := dnsv2.GetRecordsets(zonename)
+
+	// Fetch full updated list
+	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving full recordsets list...\n"))
+	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
+		Zone: zonename,
+	})
 	if err != nil {
-		akamai.StopSpinnerFail()
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
 	}
-	akamai.StopSpinnerOk()
-	recordsetList := &RecordsetList{Recordsets: recordsetResp.Recordsets} // list of response objects
+
 	results := ""
-	akamai.StartSpinner("Assembling Recordsets List ", "")
-	// full output
+
+	// Format output as JSON or table format
 	if c.IsSet("json") && c.Bool("json") {
-		rjson, err := json.MarshalIndent(recordsetList, "", "  ")
+		rjson, err := json.MarshalIndent(resp, "", "  ")
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to display recordsets list"), 1)
 		}
 		results = string(rjson)
 	} else {
-		results = renderRecordsetListTable(zonename, recordsetList.Recordsets, c)
+		results = renderRecordsetListTable(zonename, resp.RecordSets)
 	}
-	akamai.StopSpinnerOk()
+
+	// Write output to file or console
 	if len(outputPath) > 1 {
-		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
+		//fmt.Printf("Writing Output to %s ", outputPath)
 		rlfHandle, err := os.Create(outputPath)
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
 		defer rlfHandle.Close()
 		_, err = rlfHandle.WriteString(string(results))
 		if err != nil {
-			akamai.StopSpinnerFail()
 			return cli.NewExitError(color.RedString("Unable to write zone list output to file"), 1)
 		}
 		rlfHandle.Sync()
-		akamai.StopSpinnerOk()
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
 		fmt.Fprintln(c.App.Writer, "")

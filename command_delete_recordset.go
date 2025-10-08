@@ -15,64 +15,76 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdDeleteRecordset(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+
+	// Initialize context and Edgegrid session
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dnsv2.Init(config)
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
-	var (
-		zonename string
-	)
-
+	// Validate zonename argument
 	if c.NArg() == 0 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
-	zonename = c.Args().First()
+	zonename := c.Args().First()
 
+	// Check if the zone is an ALIAS zone
+	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
+		Zone: zonename,
+	})
+	if err != nil {
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+	}
+	if strings.EqualFold(zoneResp.Type, "ALIAS") {
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
+	}
+
+	// Validate required flags
 	if !c.IsSet("name") || !c.IsSet("type") {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset name and type field values are required"), 1)
 	}
-	record := dnsv2.RecordBody{}
-	record.RecordType = c.String("type")
-	record.Name = c.String("name")
+	recordType := c.String("type")
+	recordName := c.String("name")
 
-	akamai.StartSpinner("Checking Recordset existance  ", "")
-	// See if already exists
-	_, err = dnsv2.GetRecord(zonename, record.Name, record.RecordType) // returns RecordBody!
+	// Check if recordset exists
+	fmt.Println("Checking Recordset existance  ", "")
+
+	_, err = dnsClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       zonename,
+		Name:       recordName,
+		RecordType: recordType,
+	})
 	if err != nil {
-		if dnsv2.IsConfigDNSError(err) && err.(dnsv2.ConfigDNSError).NotFound() {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Existing recordset not found."), 1)
-		} else {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure retrieving recordset. Error: %s", err.Error())), 1)
-		}
+		return cli.NewExitError(color.RedString(fmt.Sprintf("Failure retrieving recordset. Error: %s", err)), 1)
 	}
-	akamai.StopSpinnerOk()
-	// Single recordset ops use RecordBody as return Object
-	akamai.StartSpinner("Deleting Recordset  ", "")
-	err = record.Delete(zonename, true)
+
+	// Delete recordset
+	err = dnsClient.DeleteRecord(ctx, dns.DeleteRecordRequest{
+		Zone:       zonename,
+		Name:       recordName,
+		RecordType: recordType,
+	})
 	if err != nil {
-		if dnsv2.IsConfigDNSError(err) && err.(dnsv2.ConfigDNSError).NotFound() {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Recordset not found"), 1)
-		} else {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to delete recordset. Error: %s", err.Error())), 1)
-		}
+		return cli.NewExitError(color.RedString(fmt.Sprintf("failed to delete record: %s", err)), 1)
 	}
-	akamai.StopSpinnerOk()
+
+	fmt.Println(color.GreenString("Record Deleted Successfully"))
 	return nil
 }

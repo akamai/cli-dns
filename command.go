@@ -15,346 +15,14 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
-	akamai "github.com/akamai/cli-common-golang"
-	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
-// V1 Records
-var (
-	baseCmdFlags = []cli.Flag{}
-
-	recordOptions = map[string]map[string]struct {
-		required bool
-		flagType string
-	}{
-		"A": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"AAAA": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"AFSDB": {
-			"active":  {false, "bool"},
-			"name":    {true, "string"},
-			"subtype": {true, "int"},
-			"target":  {true, "string"},
-			"ttl":     {false, "int"},
-		},
-		"CNAME": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"DNSKEY": {
-			"active":    {false, "bool"},
-			"algorithm": {true, "int"},
-			"flags":     {true, "int"},
-			"key":       {true, "string"},
-			"name":      {true, "string"},
-			"protocol":  {true, "int"},
-			"ttl":       {false, "int"},
-		},
-		"DS": {
-			"active":      {false, "bool"},
-			"algorithm":   {true, "int"},
-			"digest":      {true, "string"},
-			"digest-type": {true, "int"},
-			"keytag":      {true, "int"},
-			"name":        {true, "string"},
-			"ttl":         {false, "int"},
-		},
-		"HINFO": {
-			"active":   {false, "bool"},
-			"hardware": {true, "string"},
-			"name":     {true, "string"},
-			"software": {true, "string"},
-			"ttl":      {false, "int"},
-		},
-		"LOC": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"MX": {
-			"active":   {false, "bool"},
-			"name":     {true, "string"},
-			"priority": {true, "int"},
-			"target":   {true, "string"},
-			"ttl":      {false, "int"},
-		},
-		"NAPTR": {
-			"active":      {false, "bool"},
-			"flags":       {true, "string"},
-			"name":        {true, "string"},
-			"order":       {true, "uint16"},
-			"preference":  {true, "uint16"},
-			"regexp":      {true, "string"},
-			"replacement": {true, "string"},
-			"service":     {true, "string"},
-			"ttl":         {false, "int"},
-		},
-		"NS": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"NSEC3": {
-			"active":                 {false, "bool"},
-			"algorithm":              {true, "int"},
-			"flags":                  {true, "int"},
-			"iterations":             {true, "int"},
-			"name":                   {true, "string"},
-			"next-hashed-owner-name": {true, "string"},
-			"salt":                   {true, "string"},
-			"ttl":                    {false, "int"},
-			"type-bitmaps":           {true, "string"},
-		},
-		"NSEC3PARAM": {
-			"active":     {false, "bool"},
-			"algorithm":  {true, "int"},
-			"flags":      {true, "int"},
-			"iterations": {true, "int"},
-			"name":       {true, "string"},
-			"salt":       {true, "string"},
-			"ttl":        {false, "int"},
-		},
-		"PTR": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"RP": {
-			"active":  {false, "bool"},
-			"mailbox": {true, "string"},
-			"name":    {true, "string"},
-			"ttl":     {false, "int"},
-			"txt":     {true, "string"},
-		},
-		"RRSIG": {
-			"active":       {false, "bool"},
-			"algorithm":    {true, "int"},
-			"expiration":   {true, "string"},
-			"inception":    {true, "string"},
-			"keytag":       {true, "int"},
-			"labels":       {true, "int"},
-			"name":         {true, "string"},
-			"original-ttl": {true, "int"},
-			"signature":    {true, "string"},
-			"signer":       {true, "string"},
-			"ttl":          {false, "int"},
-			"type-covered": {true, "string"},
-		},
-		"SOA": {
-			"contact":      {true, "string"},
-			"expire":       {true, "int"},
-			"minimum":      {true, "uint"},
-			"originserver": {true, "string"},
-			"refresh":      {true, "int"},
-			"retry":        {true, "int"},
-			"serial":       {false, "uint"},
-			"ttl":          {false, "int"},
-		},
-		"SPF": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-		"SRV": {
-			"active":   {false, "bool"},
-			"name":     {true, "string"},
-			"port":     {true, "uint16"},
-			"priority": {true, "int"},
-			"target":   {true, "string"},
-			"ttl":      {false, "int"},
-			"weight":   {true, "uint16"},
-		},
-		"SSHFP": {
-			"active":           {false, "bool"},
-			"algorithm":        {true, "int"},
-			"fingerprint":      {true, "string"},
-			"fingerprint-type": {true, "int"},
-			"name":             {true, "string"},
-			"ttl":              {false, "int"},
-		},
-		"TXT": {
-			"active": {false, "bool"},
-			"name":   {true, "string"},
-			"target": {true, "string"},
-			"ttl":    {false, "int"},
-		},
-	}
-)
-
-var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
+func GetCommands() []cli.Command {
 	var commands []cli.Command
 
-	recordMap := []string{
-		"A",
-		"AAAA",
-		"AFSDB",
-		"CNAME",
-		"DNSKEY",
-		"DS",
-		"HINFO",
-		"LOC",
-		"MX",
-		"NAPTR",
-		"NS",
-		"NSEC3",
-		"NSEC3PARAM",
-		"PTR",
-		"RP",
-		"RRSIG",
-		"SOA",
-		"SPF",
-		"SRV",
-		"SSHFP",
-		"TXT",
-	}
-
-	addRecordCmd := cli.Command{
-		Name:        "add-record",
-		ArgsUsage:   "<record type> <hostname>",
-		Description: "DEPRECATED. Add a new record to the zone. See Readme for more information.",
-		HideHelp:    true,
-		Action: func(c *cli.Context) error {
-			if recordType := c.Args().First(); recordType == "" {
-				cli.ShowAppHelp(c)
-				return cli.NewExitError(color.RedString("You must specify a record type"), 1)
-			}
-			os.Args[2] = strings.ToUpper(c.Args().First())
-			return akamai.App.Run(os.Args)
-		},
-	}
-
-	rmRecordCmd := cli.Command{
-		Name:        "rm-record",
-		ArgsUsage:   "<record type> <hostname>",
-		Description: "DEPRECATED. Remove a record from the zone. See Readme for more information.",
-		HideHelp:    true,
-		Action: func(c *cli.Context) error {
-			if recordType := c.Args().First(); recordType == "" {
-				cli.ShowAppHelp(c)
-				return cli.NewExitError(color.RedString("You must specify a record type"), 1)
-			}
-			os.Args[2] = strings.ToUpper(c.Args().First())
-			return akamai.App.Run(os.Args)
-		},
-	}
-
-	for _, recordType := range recordMap {
-		addCmd := cli.Command{
-			Name:         recordType,
-			ArgsUsage:    "<hostname>",
-			Description:  fmt.Sprintf("DEPRECATED. Add a new %s record to the zone", recordType),
-			Action:       cmdCreateRecord,
-			HideHelp:     true,
-			BashComplete: akamai.DefaultAutoComplete,
-		}
-
-		rmCmd := cli.Command{
-			Name:         recordType,
-			ArgsUsage:    "<hostname>",
-			Description:  fmt.Sprintf("DEPRECATED. Remove a %s record from the zone", recordType),
-			Action:       cmdRmRecord,
-			HideHelp:     true,
-			BashComplete: akamai.DefaultAutoComplete,
-			Flags: append(baseCmdFlags, []cli.Flag{
-				cli.BoolFlag{
-					Name:  "non-interactive",
-					Usage: "Run in non-interactive mode",
-				},
-				cli.BoolFlag{
-					Name:  "force-multiple",
-					Usage: "Force removal of multiple matched records",
-				},
-			}...),
-		}
-
-		for option, settings := range recordOptions[recordType] {
-			var flag cli.Flag
-			switch option {
-			case "ttl":
-				flag = cli.IntFlag{
-					Name:  option,
-					Value: 7200,
-				}
-			case "active":
-				flag = cli.BoolTFlag{
-					Name: "active",
-				}
-				addCmd.Flags = append(addCmd.Flags, flag)
-				rmCmd.Flags = append(rmCmd.Flags, flag)
-
-				flag = cli.BoolFlag{
-					Name: "inactive",
-				}
-			case "target":
-				flag = cli.StringFlag{
-					Name:  option,
-					Usage: "Target `ADDRESS`",
-					//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
-				}
-			default:
-				switch settings.flagType {
-				case "string":
-					flag = cli.StringFlag{
-						Name: option,
-						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
-					}
-				case "int":
-					flag = cli.IntFlag{
-						Name: option,
-						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
-					}
-				case "uint":
-					flag = cli.UintFlag{
-						Name: option,
-						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
-					}
-				case "uint16":
-					flag = cli.UintFlag{
-						Name: option,
-						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
-					}
-				case "bool":
-					flag = cli.BoolFlag{
-						Name: option,
-						//EnvVar: "AKAMAI_DNS_" + strings.ToUpper(option),
-					}
-				}
-			}
-
-			addCmd.Flags = append(addCmd.Flags, flag)
-			rmCmd.Flags = append(rmCmd.Flags, flag)
-		}
-
-		addRecordCmd.Subcommands = append(addRecordCmd.Subcommands, addCmd)
-		rmRecordCmd.Subcommands = append(rmRecordCmd.Subcommands, rmCmd)
-	}
-
-	commands = append(commands, addRecordCmd)
-	commands = append(commands, rmRecordCmd)
-
-	// V2 Base flags
-
-	var baseV2BaseFlags = []cli.Flag{
+	// V11 Recordsets
+	baseV11BaseFlags := []cli.Flag{
 		cli.BoolFlag{
 			Name:   "json",
 			Usage:  "Output as JSON",
@@ -362,36 +30,84 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		},
 		cli.StringFlag{
 			Name:  "output",
-			Usage: "Output command results to `FILE`",
+			Usage: "Output command results to FILE",
 		},
 	}
 
-	baseV2CmdFlags := append(baseV2BaseFlags, []cli.Flag{
+	baseV11CmdFlags := append(baseV11BaseFlags,
 		cli.BoolFlag{
 			Name:   "suppress",
-			Usage:  "Suppress command result output. Overrides other output related flags",
+			Usage:  "Suppress command result output",
 			EnvVar: "AKAMAI_CLI_DNS_" + "SUPPRESS",
-		},
-	}...)
+		})
 
-	baseSetCmdFlags := append(baseV2CmdFlags, []cli.Flag{
+	baseSetCmdFlags := append(baseV11CmdFlags,
 		cli.StringFlag{
 			Name:  "name",
-			Usage: "Recordset `NAME`",
+			Usage: "Recordset NAME",
 		},
 		cli.StringFlag{
 			Name:  "type",
-			Usage: "Recordset `TYPE`",
+			Usage: "Recordset TYPE (can be ignored for add-record command)",
 		},
-	}...)
+	)
 
-	// V2 Recordsets
+	commands = append(commands, cli.Command{
+		Name:        "retrieve-zone",
+		Description: "Retrieve a zone's configuration and records",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdRetrieveZone,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "json",
+				Usage: "Output zone in JSON format",
+			},
+			cli.StringSliceFlag{
+				Name:  "filter",
+				Usage: "Filter by record type",
+			},
+		},
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "update-zone",
+		Description: "Update a zone using either a recordsets JSON file or a DNS master zone file",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdUpdateZone,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "file, f",
+				Usage: "Path to input file (JSON for recordsets or DNS master file)",
+			},
+			cli.BoolFlag{
+				Name:  "dns",
+				Usage: "Use this flag if input file is a DNS master zone file",
+			},
+			cli.StringFlag{
+				Name:  "output, o",
+				Usage: "Optional output path for updated zone details",
+			},
+			cli.BoolFlag{
+				Name:  "overwrite",
+				Usage: "Overwrite all recordsets instead of merging with existing",
+			},
+			cli.BoolFlag{
+				Name:  "json",
+				Usage: "Output zone response in JSON format",
+			},
+			cli.BoolFlag{
+				Name:  "suppress",
+				Usage: "Suppress output to console",
+			},
+		},
+	})
+
 	commands = append(commands, cli.Command{
 		Name:        "list-recordsets",
 		Description: "Retreive list of zone Recordsets",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdListRecordsets,
-		Flags: append(baseV2BaseFlags, []cli.Flag{
+		Flags: append(baseV11BaseFlags,
 			cli.StringSliceFlag{
 				Name:  "type",
 				Usage: "List recordset(s) matching `TYPE`. Multiple flags allowed",
@@ -404,8 +120,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "search",
 				Usage: "Filter returned recordsets by `SEARCH` criteria",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -413,13 +128,12 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Create multiple zone Recordsets from `FILE`",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdCreateRecordsets,
-		Flags: append(baseV2CmdFlags, []cli.Flag{
+		Flags: append(baseV11CmdFlags,
 			cli.StringFlag{
 				Name:  "file",
 				Usage: "`FILE` path to JSON formatted recordset content",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -427,7 +141,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Update multiple zone Recordsets from `FILE`",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdUpdateRecordsets,
-		Flags: append(baseV2CmdFlags, []cli.Flag{
+		Flags: append(baseV11CmdFlags,
 			cli.BoolFlag{
 				Name:  "overwrite",
 				Usage: "Replace ALL Recordsets",
@@ -436,8 +150,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "file",
 				Usage: "`FILE` path to JSON formatted recordset content",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -445,7 +158,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Retrieve recordset",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdRetrieveRecordset,
-		Flags: append(baseV2BaseFlags, []cli.Flag{
+		Flags: append(baseV11BaseFlags,
 			cli.StringFlag{
 				Name:  "name",
 				Usage: "Recordset `NAME`",
@@ -454,8 +167,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "type",
 				Usage: "Recordset `TYPE`",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -463,7 +175,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Create a new recordset",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdCreateRecordset,
-		Flags: append(baseSetCmdFlags, []cli.Flag{
+		Flags: append(baseSetCmdFlags,
 			cli.IntFlag{
 				Name:  "ttl",
 				Usage: "Recordset `TTL`",
@@ -476,8 +188,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "file",
 				Usage: "`FILE` path to JSON formatted recordset content",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -485,7 +196,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Update existing recordset",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdUpdateRecordset,
-		Flags: append(baseSetCmdFlags, []cli.Flag{
+		Flags: append(baseSetCmdFlags,
 			cli.IntFlag{
 				Name:  "ttl",
 				Usage: "Recordset `TTL`",
@@ -498,8 +209,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "file",
 				Usage: "`FILE` path to JSON formatted recordset content. Allows multiple recordsets.",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -517,62 +227,49 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Usage: "Recordset `TYPE`",
 			},
 		},
-		BashComplete: akamai.DefaultAutoComplete,
 	})
 
-	// V1 Zone
 	commands = append(commands, cli.Command{
-		Name:        "retrieve-zone",
-		Description: "DEPRECATED. Fetch and display a zone. See Readme for more information.",
-		ArgsUsage:   "<hostname>",
-		Action:      cmdRetrieveZone,
-		Flags: append(baseCmdFlags, []cli.Flag{
-			cli.BoolFlag{
-				Name:   "json",
-				Usage:  "Output as JSON",
-				EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
-			},
-			cli.BoolFlag{
-				Name:  "output",
-				Usage: "Output to `FILE`",
-			},
+		Name:        "add-record",
+		Description: "Create or update a DNS recordset in a zone",
+		ArgsUsage:   "<type> <zonename>",
+		Action:      cmdAddRecord,
+		Flags: append(baseSetCmdFlags,
 			cli.StringSliceFlag{
-				Name:  "filter",
-				Usage: "Only show record types matching `TYPE`",
+				Name:  "rdata",
+				Usage: "Record target (RDATA), multiple flags allowed",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+			cli.IntFlag{
+				Name:  "ttl",
+				Usage: "Recordset TTL in seconds",
+			},
+		),
 	})
 
 	commands = append(commands, cli.Command{
-		Name:        "update-zone",
-		Description: "DEPRECATED. Update a zone. See Readme for more information.",
-		ArgsUsage:   "<hostname>",
-		Action:      cmdUpdateZone,
-		Flags: append(baseCmdFlags, []cli.Flag{
-			cli.BoolTFlag{
-				Name:   "json",
-				Usage:  "Input is in JSON format",
-				EnvVar: "AKAMAI_CLI_DNS_" + "JSON",
-			},
-			cli.BoolFlag{
-				Name:  "dns",
-				Usage: "Input is in DNS Zone format",
-			},
-			cli.BoolFlag{
-				Name:  "overwrite",
-				Usage: "Overwrite all existing records (default: false)",
-			},
+		Name:        "rm-record",
+		Description: "Remove a DNS recordset from a zone",
+		ArgsUsage:   "<record type> <zonename>",
+		Action:      cmdRmRecord,
+		Flags: append(baseV11CmdFlags,
 			cli.StringFlag{
-				Name:  "file",
-				Usage: "Read input from `FILE`",
+				Name:  "name",
+				Usage: "Record name to delete (eg: --name www)",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+			cli.BoolFlag{
+				Name:  "force-multiple",
+				Usage: "Force delete all matching records without confirmation",
+			},
+			cli.BoolFlag{
+				Name:  "non-interactive",
+				Usage: "Run in non-interactive mode (e.g. CI). Fails if multiple matches and not forced.",
+			},
+		),
 	})
 
-	// V2 Zones
-	baseZoneCmdFlags := append(baseV2CmdFlags, []cli.Flag{
+	// V11 Zones
+	//Zone level flags
+	baseZoneCmdFlags := append(baseV11CmdFlags,
 		cli.StringFlag{
 			Name:  "type",
 			Usage: "Zone `TYPE`",
@@ -617,16 +314,16 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 			Name:  "file",
 			Usage: "Read JSON formatted input from `FILE`",
 		},
-	}...)
+	)
 
 	commands = append(commands, cli.Command{
 		Name:        "list-zoneconfig",
 		Description: "List zone configuration(s)",
 		Action:      cmdListZoneconfig,
-		Flags: append(baseV2BaseFlags, []cli.Flag{
-			cli.StringSliceFlag{
+		Flags: append(baseV11BaseFlags,
+			cli.StringFlag{
 				Name:  "contractid",
-				Usage: "Contract `ID`. Multiple flags allowed",
+				Usage: "Contract `ID`",
 			},
 			cli.StringSliceFlag{
 				Name:  "type",
@@ -640,8 +337,20 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "summary",
 				Usage: "List zone names and type",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
+	})
+
+	commands = append(commands, cli.Command{
+		Name:        "retrieve-zoneconfig",
+		Description: "Fetch and display zone configuration",
+		ArgsUsage:   "<zonename>",
+		Action:      cmdRetrieveZoneconfig,
+		Flags: append(baseV11BaseFlags,
+			cli.BoolFlag{
+				Name:  "dns",
+				Usage: "Retrieve Zone Master File",
+			},
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -649,7 +358,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		ArgsUsage:   "<zonename>",
 		Description: "Create zone from configuration",
 		Action:      cmdCreateZoneconfig,
-		Flags: append(baseZoneCmdFlags, []cli.Flag{
+		Flags: append(baseZoneCmdFlags,
 			cli.StringFlag{
 				Name:  "contractid",
 				Usage: "Contract `ID`",
@@ -662,23 +371,7 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "initialize",
 				Usage: "Generate default SOA and NS Records",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
-	})
-
-	commands = append(commands, cli.Command{
-		Name:        "retrieve-zoneconfig",
-		Description: "Fetch and display zone configuration",
-		ArgsUsage:   "<zonename>",
-		Action:      cmdRetrieveZoneconfig,
-		Flags: append(baseV2BaseFlags, []cli.Flag{
-			cli.BoolFlag{
-				Name:  "dns",
-				Usage: "Retrieve Zone Master File",
-			},
-		}...),
-
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
@@ -686,27 +379,26 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 		Description: "Update a zone",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdUpdateZoneconfig,
-		Flags: append(baseZoneCmdFlags, []cli.Flag{
+		Flags: append(baseZoneCmdFlags,
 			cli.BoolFlag{
 				Name:  "dns",
 				Usage: "Input is Zone Master File",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
 		Name:        "submit-bulkzones",
 		Description: "Submit Bulk Zones request",
 		Action:      cmdSubmitBulkZones,
-		Flags: append(baseV2CmdFlags, []cli.Flag{
+		Flags: append(baseV11CmdFlags,
 			cli.StringFlag{
 				Name:  "contractid",
 				Usage: "Contract `ID`. Required for create.",
 			},
 			cli.StringFlag{
 				Name:  "groupid",
-				Usage: "Group `ID`. Optional for create.",
+				Usage: "Group `ID`. Required for create.",
 			},
 			cli.BoolFlag{
 				Name:  "bypasszonesafety",
@@ -724,15 +416,14 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "file",
 				Usage: "Read JSON formatted input from `FILE`",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
 		Name:        "status-bulkzones",
 		Description: "Query Bulk Zones Request Status",
 		Action:      cmdStatusBulkZones,
-		Flags: append(baseV2BaseFlags, []cli.Flag{
+		Flags: append(baseV11BaseFlags,
 			cli.StringSliceFlag{
 				Name:  "requestid",
 				Usage: "Request Id. Multiple args allowed.",
@@ -745,15 +436,14 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "delete",
 				Usage: "Bulk zone delete operation.",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
 	commands = append(commands, cli.Command{
 		Name:        "result-bulkzones",
 		Description: "Query Bulk Zones Result Summary",
 		Action:      cmdResultBulkZones,
-		Flags: append(baseV2BaseFlags, []cli.Flag{
+		Flags: append(baseV11BaseFlags,
 			cli.StringSliceFlag{
 				Name:  "requestid",
 				Usage: "Request Id. Multiple args allowed.",
@@ -766,24 +456,9 @@ var commandLocator akamai.CommandLocator = func() ([]cli.Command, error) {
 				Name:  "delete",
 				Usage: "Bulk zone delete operation.",
 			},
-		}...),
-		BashComplete: akamai.DefaultAutoComplete,
+		),
 	})
 
-	commands = append(commands,
-		cli.Command{
-			Name:        "list",
-			Description: "List commands",
-			Action:      akamai.CmdList,
-		},
-		cli.Command{
-			Name:         "help",
-			Description:  "Displays help information",
-			ArgsUsage:    "[command] [sub-command]",
-			Action:       akamai.CmdHelp,
-			BashComplete: akamai.DefaultAutoComplete,
-		},
-	)
+	return commands
 
-	return commands, nil
 }

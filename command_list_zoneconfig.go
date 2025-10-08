@@ -15,17 +15,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	akamai "github.com/akamai/cli-common-golang"
+	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
+
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
 	"github.com/urfave/cli"
 )
 
@@ -41,223 +41,90 @@ type ZoneSummaryList struct {
 }
 
 type ZoneList struct {
-	Zones []*dnsv2.ZoneResponse
+	Zones []*dns.ZoneResponse
 }
 
 func cmdListZoneconfig(c *cli.Context) error {
-	config, err := akamai.GetEdgegridConfig(c)
+
+	// Initialize context and Edgegrid session
+	ctx := context.Background()
+
+	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("session failed %v", err)
 	}
-	dnsv2.Init(config)
+	ctx = edgegrid.WithSession(ctx, sess)
+	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
-	var (
-		outputPath string
-		contractid []string
-		ztype      []string
-		search     string
-	)
-	queryArgs := dnsv2.ZoneListQueryArgs{}
-	queryArgs.ShowAll = true
-
-	// for testing
-	//queryArgs.ShowAll = false
-	//queryArgs.PageSize = 5
-
-	queryArgs.SortBy = "contractId,type,zone"
-	if c.IsSet("output") {
-		outputPath = c.String("output")
-		outputPath = filepath.FromSlash(outputPath)
+	// Build zone list query from CLI flags
+	query := dns.ListZonesRequest{
+		ShowAll: true,
+		SortBy:  "zone",
 	}
+
 	if c.IsSet("contractid") {
-		contractid = c.StringSlice("contractid")
-		for i, cid := range contractid {
-			queryArgs.ContractIds += cid
-			if i < len(contractid)-1 {
-				queryArgs.ContractIds += ","
-			}
-		}
+		contractid := c.String("contractid")
+		query.ContractIDs = contractid
 	}
 	if c.IsSet("type") {
-		ztype = c.StringSlice("type")
-		for i, zt := range ztype {
-			queryArgs.Types += zt
-			if i < len(ztype)-1 {
-				queryArgs.Types += ","
-			}
-		}
+		types := c.StringSlice("type")
+		query.Types = strings.Join(types, ",")
 	}
 	if c.IsSet("search") {
-		search = c.String("search")
-		queryArgs.Search = search
+		query.Search = c.String("search")
 	}
-	akamai.StartSpinner("Retrieving Zone List ", "")
-	zoneListResponse, err := dnsv2.ListZones(queryArgs)
+
+	// Fetch zones from DNS client
+	resp, err := dnsClient.ListZones(ctx, query)
 	if err != nil {
-		akamai.StopSpinnerFail()
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone List retrieval failed. Error: %s", err.Error())), 1)
+		return fmt.Errorf("zone list retrieval failed: %v", err)
 	}
-	akamai.StopSpinnerOk()
-	zones := zoneListResponse.Zones // list of ZoneResponse objects
-	results := ""
-	akamai.StartSpinner("Assembling Zone List ", "")
-	if c.IsSet("summary") && c.Bool("summary") {
-		if c.IsSet("json") && c.Bool("json") {
-			zoneSummary := ZoneSummaryList{}
-			zoneSummaryList := make([]*ZoneSummary, 0, len(zones))
-			for _, zone := range zones {
-				zs := &ZoneSummary{}
-				zs.Zone = zone.Zone
-				zs.Type = zone.Type
-				zs.ActivationState = zone.ActivationState
-				zs.ContractId = zone.ContractId
-				zoneSummaryList = append(zoneSummaryList, zs)
+	zones := resp.Zones
+	var output string
+
+	// Format output in summary or table, optionally as JSON
+	if c.Bool("summary") {
+		if c.Bool("json") {
+			summaryList := ZoneSummaryList{}
+			for _, z := range zones {
+				summaryList.Zones = append(summaryList.Zones, &ZoneSummary{
+					Zone:            z.Zone,
+					Type:            z.Type,
+					ActivationState: z.ActivationState,
+					ContractId:      z.ContractID,
+				})
 			}
-			zoneSummary.Zones = zoneSummaryList
-			json, err := json.MarshalIndent(zoneSummary, "", "  ")
+			b, err := json.MarshalIndent(summaryList, "", " ")
 			if err != nil {
-				akamai.StopSpinnerFail()
-				return cli.NewExitError(color.RedString("Unable to display zone list"), 1)
+				return fmt.Errorf("failed to marshal summary JSON: %v", err)
 			}
-			results = string(json)
+			output = string(b)
 		} else {
-			results = renderZoneSummaryListTable(zones, c)
+			output = renderZoneSummaryListTable(zones)
 		}
 	} else {
-		// full output
-		if c.IsSet("json") && c.Bool("json") {
-			zoneSummary := ZoneList{Zones: zones}
-			json, err := json.MarshalIndent(zoneSummary, "", "  ")
+		if c.Bool("json") {
+			b, err := json.MarshalIndent(zones, "", " ")
 			if err != nil {
-				akamai.StopSpinnerFail()
-				return cli.NewExitError(color.RedString("Unable to display zone list"), 1)
+				return fmt.Errorf("failed to marshal full JSON: %v", err)
 			}
-			results = string(json)
+			output = string(b)
 		} else {
-			results = renderZoneListTable(zones, c)
+			output = renderZoneListTable(zones)
 		}
 	}
-	akamai.StopSpinnerOk()
-	if len(outputPath) > 1 {
-		akamai.StartSpinner(fmt.Sprintf("Writing Output to %s ", outputPath), "")
-		zlfHandle, err := os.Create(outputPath)
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+
+	// Write output to file or print to console
+	if outFile := c.String("output"); outFile != "" {
+		path := filepath.FromSlash(outFile)
+		if err := os.WriteFile(path, []byte(output), 0644); err != nil {
+			return fmt.Errorf("failed to write to output file %v", err)
 		}
-		defer zlfHandle.Close()
-		_, err = zlfHandle.WriteString(string(results))
-		if err != nil {
-			akamai.StopSpinnerFail()
-			return cli.NewExitError(color.RedString("Unable to write zone list output to file"), 1)
-		}
-		zlfHandle.Sync()
-		akamai.StopSpinnerOk()
-		return nil
+		fmt.Fprintln(c.App.Writer, color.GreenString("Output written to %s", path))
 	} else {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, results)
+		fmt.Fprintln(c.App.Writer, output)
 	}
 
 	return nil
-}
-
-func renderZoneListTable(zones []*dnsv2.ZoneResponse, c *cli.Context) string {
-
-	//bold := color.New(color.FgWhite, color.Bold)
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Zone List")
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetHeader([]string{"ZONE", "ATTRIBUTE", "VALUE"})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
-
-	if len(zones) == 0 {
-		rowData := []string{"No zones found", " ", " "}
-		table.Append(rowData)
-	} else {
-		for _, zone := range zones {
-			zname := zone.Zone
-			ztype := zone.Type
-			table.Append([]string{zname, "Type", ztype})
-			if len(zone.Comment) > 0 {
-				table.Append([]string{" ", "Comment", zone.Comment})
-			}
-			if strings.ToUpper(ztype) == "SECONDARY" {
-				if len(zone.Masters) > 0 {
-					masters := strings.Join(zone.Masters, " ,")
-					table.Append([]string{" ", "Masters", masters})
-				}
-				if zone.TsigKey != nil {
-					table.Append([]string{" ", "TsigKey:Name", zone.TsigKey.Name})
-					table.Append([]string{" ", "TsigKey:Algorithm", zone.TsigKey.Algorithm})
-					table.Append([]string{" ", "TsigKey:Secret", zone.TsigKey.Secret})
-				}
-			}
-			if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
-				table.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
-				if len(zone.SignAndServeAlgorithm) > 0 {
-					table.Append([]string{" ", "SignAndServeAlgorithm", fmt.Sprintf("%s", zone.SignAndServeAlgorithm)})
-				}
-			}
-			if strings.ToUpper(ztype) == "ALIAS" {
-				table.Append([]string{" ", "Target", zone.Target})
-				table.Append([]string{" ", "AliasCount", strconv.FormatInt(zone.AliasCount, 10)})
-			}
-			table.Append([]string{" ", "ActivationState", zone.ActivationState})
-			table.Append([]string{" ", "LastActivationDate", zone.LastActivationDate})
-			table.Append([]string{" ", "LastModifiedDate", zone.LastModifiedDate})
-			table.Append([]string{" ", "VersionId", zone.VersionId})
-			table.Append([]string{" ", " ", " "})
-		}
-	}
-	table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
-}
-
-func renderZoneSummaryListTable(zones []*dnsv2.ZoneResponse, c *cli.Context) string {
-
-	//bold := color.New(color.FgWhite, color.Bold)
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Zone List Summary")
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetHeader([]string{"ZONE", "TYPE", "ACTIVATION STATE", "CONTRACT ID"})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
-	table.SetAutoWrapText(false)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
-	table.SetAlignment(tablewriter.ALIGN_CENTER)
-	table.SetRowLine(true)
-
-	if len(zones) == 0 {
-		rowData := []string{"No zones found", " ", " ", " "}
-		table.Append(rowData)
-	} else {
-		for _, zone := range zones {
-			values := []string{zone.Zone, zone.Type, zone.ActivationState, zone.ContractId}
-			table.Append(values)
-		}
-	}
-	table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
 
 }
