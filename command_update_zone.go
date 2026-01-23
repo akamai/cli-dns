@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -44,7 +44,7 @@ func cmdUpdateZone(c *cli.Context) error {
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 	zonename := c.Args().First()
@@ -225,16 +225,16 @@ func cmdUpdateZone(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file: %v", err)), 1)
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		_, err = f.WriteString(results)
 		if err != nil {
 			return cli.NewExitError(color.RedString("Failed to write zone output to file"), 1)
 		}
-		f.Sync()
-		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
+		_ = f.Sync()
+		_, _ = fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	} else {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, results)
+		_, _ = fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 
 	return nil

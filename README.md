@@ -25,7 +25,7 @@ for your system, or by cloning this repository and compiling it yourself.
 
 ### Compiling from Source
 
-If you want to compile the package from source, you will need Go 1.23 or later installed:
+If you want to compile the package from source, you will need Go 1.25 or later installed:
 
 1. Create a clone of the target repository:
    `git clone https://github.com/akamai/cli-dns.git`
@@ -57,7 +57,7 @@ $  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
 
 ```
    --edgerc value      Location of the credentials file (default: "/home/elynes/.edgerc") [$AKAMAI_EDGERC]
-   --section value     Section of the credentials file (default: "dns") [$AKAMAI_EDGERC_SECTION]
+   --section value     Section of the credentials file (default: "default") [$AKAMAI_EDGERC_SECTION]
    --accountkey value  Account switch key [$AKAMAI_EDGERC_ACCOUNT_KEY]
 ```
 
@@ -306,11 +306,12 @@ The complete command line is:
 ```
 akamai dns update-zoneconfig <zonename> [--json] [--suppress] [--output] [--type] [--master] [--comment] [--signandserve] [--algorithm] [--tsigname] [--tsigalgorithm] [--tsigsecret] [--target] [--endcustomerid] [--file] [--contractid] [--dns]
 
+
 Flags:
    --json                         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --suppress                     Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
    --output FILE                  Output command results to FILE
-   --type TYPE                    Zone TYPE
+   --type TYPE                    Zone TYPE {REQUIRED}
    --master MASTER                Secondary Zone MASTER. Multiple flags may be specified
    --comment COMMENT              Zone COMMENT
    --signandserve SIGNANDSERVE    Primary or Secondary Zone SIGNANDSERVE flag

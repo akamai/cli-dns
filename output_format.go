@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
@@ -115,7 +115,7 @@ func renderZoneconfigTable(zone *dns.GetZoneResponse, c *cli.Context) string {
 		if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
 			table.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
 			if len(zone.SignAndServeAlgorithm) > 0 {
-				table.Append([]string{" ", "SignAndServeAlgorithm", fmt.Sprintf("%s", zone.SignAndServeAlgorithm)})
+				table.Append([]string{" ", "SignAndServeAlgorithm", zone.SignAndServeAlgorithm})
 			}
 		}
 		if strings.ToUpper(ztype) == "ALIAS" {
@@ -180,7 +180,7 @@ func renderZoneListTable(zones []dns.ZoneResponse) string {
 			if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
 				table.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
 				if len(zone.SignAndServeAlgorithm) > 0 {
-					table.Append([]string{" ", "SignAndServeAlgorithm", fmt.Sprintf("%s", zone.SignAndServeAlgorithm)})
+					table.Append([]string{" ", "SignAndServeAlgorithm", zone.SignAndServeAlgorithm})
 				}
 			}
 			if strings.ToUpper(ztype) == "ALIAS" {
@@ -253,12 +253,12 @@ func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.
 	}
 
 	table.Render()
-	fmt.Fprintln(c.App.Writer, tableString.String())
+	_, _ = fmt.Fprintln(c.App.Writer, tableString.String())
 
 	if len(records) > 0 {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, "DNS Records: ")
-		fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, "DNS Records: ")
+		_, _ = fmt.Fprintln(c.App.Writer, "")
 
 		recordsTableString := &strings.Builder{}
 		recordsTable := tablewriter.NewWriter(recordsTableString)
@@ -274,7 +274,7 @@ func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.
 			}
 		}
 		recordsTable.Render()
-		fmt.Fprintln(c.App.Writer, recordsTableString.String())
+		_, _ = fmt.Fprintln(c.App.Writer, recordsTableString.String())
 	}
 }
 
@@ -403,7 +403,7 @@ func renderBulkZonesResultTable(resultRespList interface{}, c *cli.Context) stri
 		failzones = delreq.FailedZones
 		op = "Deleted"
 		table.Append([]string{"Request Id", requestid, "", ""})
-		table.Append([]string{fmt.Sprintf("", "Successfully %s Zones", op), "", ""})
+		table.Append([]string{fmt.Sprintf("Successfully %s Zones", op), "", ""})
 		if len(succzones) == 0 {
 			table.Append([]string{"", "", "None", ""})
 		} else {
@@ -411,7 +411,7 @@ func renderBulkZonesResultTable(resultRespList interface{}, c *cli.Context) stri
 				table.Append([]string{"", "", zn, ""})
 			}
 		}
-		table.Append([]string{fmt.Sprintf("", "Failed %s Zones", op), "", ""})
+		table.Append([]string{fmt.Sprintf("Failed %s Zones", op), "", ""})
 		if len(succzones) == 0 {
 			table.Append([]string{"", "", "None", ""})
 		} else {

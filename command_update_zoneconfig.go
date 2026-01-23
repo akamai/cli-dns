@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -49,7 +49,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
@@ -69,7 +69,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 			fmt.Println("Warning: Zone Field and File args are defined. Field values will be ignored!")
 		}
 	} else if !c.IsSet("type") && !masterfile {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Either zone command line field values or input file are required"), 1)
 	}
 
@@ -214,7 +214,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	err = dns.ValidateZone(newZone)
 
 	if err != nil {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid value provided for zone. Error: %s", err.Error())), 1)
 	}
 
@@ -256,17 +256,17 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
-		defer zfHandle.Close()
+		defer func() { _ = zfHandle.Close() }()
 		_, err = zfHandle.WriteString(string(results))
 		if err != nil {
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
-		zfHandle.Sync()
-		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
+		_ = zfHandle.Sync()
+		_, _ = fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, results)
+		_, _ = fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 
 	return nil

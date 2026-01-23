@@ -24,7 +24,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -47,7 +47,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 
 	// Validate zonename argument
 	if zonename == "" {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename required"), 1)
 	}
 
@@ -71,7 +71,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
 			return cli.NewExitError(color.RedString("zone does not exist"), 1)
 		}
-		return cli.NewExitError(fmt.Sprintf(color.RedString("failed to retrieve zone: %s", err)), 1)
+		return cli.NewExitError(color.RedString("failed to retrieve zone: %s", err), 1)
 	}
 
 	// Retrieve zone as master zone file
@@ -87,7 +87,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
 				return cli.NewExitError(color.RedString("zone doesn't exist"), 1)
 			}
-			return cli.NewExitError(fmt.Sprintf(color.RedString("failed to retrieve master file: %s", err)), 1)
+			return cli.NewExitError(color.RedString("failed to retrieve master file: %s", err), 1)
 		}
 		results = content
 	} else {
@@ -117,9 +117,9 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		//fmt.Fprintf(os.Stderr, color.GreenString("Writing output to %s...\n", outputPath))
 		file, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(fmt.Sprintf(color.RedString("failed to create output file: %s", err)), 1)
+			return cli.NewExitError(color.RedString("failed to create output file: %s", err), 1)
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		if _, err := file.WriteString(results); err != nil {
 			return cli.NewExitError(color.RedString("failed to write output to file"), 1)

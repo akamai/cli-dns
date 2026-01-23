@@ -25,7 +25,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -34,7 +34,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
@@ -102,7 +102,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 			contractID = newZone.ContractID
 		}
 	} else {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zone command line values or input file are required"), 1)
 	}
 
@@ -112,7 +112,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 
 	err = dns.ValidateZone(newZone)
 	if err != nil {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid zone value: %s", err)), 1)
 	}
 
@@ -175,13 +175,15 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("failed to write output file: %v", err)), 1)
 		}
-		defer f.Close()
-		f.WriteString(result)
-		f.Sync()
+		defer func() { _ = f.Close() }()
+		_, _ = f.WriteString(result)
+		if err := f.Sync(); err != nil {
+			return cli.NewExitError(color.RedString("failed to sync file: %s", err), 1)
+		}
 		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	} else {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, result)
+		_, _ = fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, result)
 	}
 
 	return nil

@@ -24,7 +24,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -32,7 +32,7 @@ import (
 func cmdCreateRecordset(c *cli.Context) error {
 	//Validate zone name argument
 	if c.NArg() == 0 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
@@ -98,7 +98,7 @@ func cmdCreateRecordset(c *cli.Context) error {
 		// Construct recordset from CLI flags
 	} else if c.IsSet("type") {
 		if !c.IsSet("name") || !c.IsSet("ttl") || !c.IsSet("rdata") {
-			cli.ShowCommandHelp(c, c.Command.Name)
+			_ = cli.ShowCommandHelp(c, c.Command.Name)
 			return cli.NewExitError(color.RedString("Field flags missing for recordset creation"), 1)
 		}
 		newrecord.RecordType = strings.ToUpper(c.String("type"))
@@ -106,7 +106,7 @@ func cmdCreateRecordset(c *cli.Context) error {
 		newrecord.TTL = c.Int("ttl")
 		newrecord.Target = c.StringSlice("rdata")
 	} else {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset field values or input file are required"), 1)
 	}
 
@@ -167,17 +167,17 @@ func cmdCreateRecordset(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
-		defer rsHandle.Close()
+		defer func() { _ = rsHandle.Close() }()
 		_, err = rsHandle.WriteString(string(results))
 		if err != nil {
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
-		rsHandle.Sync()
+		_ = rsHandle.Sync()
 		fmt.Println(color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, results)
+		_, _ = fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 
 	return nil

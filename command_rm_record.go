@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -41,7 +41,7 @@ func cmdRmRecord(c *cli.Context) error {
 
 	// Validate record type and zone name arguments
 	if c.NArg() < 2 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("record type and zonename are required"), 1)
 	}
 	recordType := strings.ToUpper(c.Args().Get(0))
@@ -59,7 +59,7 @@ func cmdRmRecord(c *cli.Context) error {
 	}
 
 	if !c.IsSet("name") {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Record name (--name) is required"), 1)
 	}
 	name := c.String("name")
