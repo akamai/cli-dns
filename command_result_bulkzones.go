@@ -23,7 +23,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -118,17 +118,17 @@ func cmdResultBulkZones(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
-		defer zfHandle.Close()
+		defer func() { _ = zfHandle.Close() }()
 		_, err = zfHandle.WriteString(string(results))
 		if err != nil {
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
-		zfHandle.Sync()
+		_ = zfHandle.Sync()
 		fmt.Println(color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, results)
+		_, _ = fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 
 	return nil

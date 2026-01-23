@@ -25,7 +25,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -235,7 +235,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 	if err != nil {
 		return cli.NewExitError(color.RedString("failed to create output file: %s", err), 1)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if _, err := file.WriteString(results); err != nil {
 		return cli.NewExitError(color.RedString("failed to write output"), 1)
@@ -245,8 +245,8 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		return nil
 	}
 
-	fmt.Fprintln(c.App.Writer, "")
-	fmt.Fprintln(c.App.Writer, results)
-	fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
+	_, _ = fmt.Fprintln(c.App.Writer, "")
+	_, _ = fmt.Fprintln(c.App.Writer, results)
+	_, _ = fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	return nil
 }

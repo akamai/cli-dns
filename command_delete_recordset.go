@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -39,7 +39,7 @@ func cmdDeleteRecordset(c *cli.Context) error {
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 	zonename := c.Args().First()
@@ -57,7 +57,7 @@ func cmdDeleteRecordset(c *cli.Context) error {
 
 	// Validate required flags
 	if !c.IsSet("name") || !c.IsSet("type") {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset name and type field values are required"), 1)
 	}
 	recordType := c.String("type")

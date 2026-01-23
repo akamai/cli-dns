@@ -25,7 +25,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -34,7 +34,7 @@ func cmdAddRecord(c *cli.Context) error {
 
 	//Validate postional arguments; record type and zone name
 	if c.NArg() < 2 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("record type and zonename are required"), 1)
 	}
 
@@ -43,7 +43,7 @@ func cmdAddRecord(c *cli.Context) error {
 
 	//validate required flags
 	if !c.IsSet("name") || !c.IsSet("rdata") || !c.IsSet("ttl") {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("--name, --rdata and --ttl are required"), 1)
 	}
 
@@ -189,16 +189,16 @@ func cmdAddRecord(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
 		}
-		defer rsHandle.Close()
+		defer func() { _ = rsHandle.Close() }()
 		_, err = rsHandle.WriteString(results)
 		if err != nil {
 			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
 		}
-		rsHandle.Sync()
+		_ = rsHandle.Sync()
 		fmt.Println(color.GreenString("Output written to %s", outputPath))
 	} else {
-		fmt.Fprintln(c.App.Writer, "")
-		fmt.Fprintln(c.App.Writer, results)
+		_, _ = fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 
 	return nil
