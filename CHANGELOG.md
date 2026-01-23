@@ -7,7 +7,7 @@
 ### Features/Enhancements
 
 * Add support for arm64 architecture
-* Upgrade to Edgegrid v12.2.0 
+* Upgrade to Edgegrid v12.3.0 
 * Migrate to go 1.25.0
 
 ## Version 0.6.0 (July 4, 2025)
