@@ -22,7 +22,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -41,13 +41,13 @@ func cmdRetrieveZone(c *cli.Context) error {
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 
 	zonename := c.Args().First()
 
-	fmt.Fprintln(c.App.Writer, color.BlueString("Fetching zone..."))
+	_, _ = fmt.Fprintln(c.App.Writer, color.BlueString("Fetching zone..."))
 
 	// Fetch zone details
 	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
@@ -61,7 +61,7 @@ func cmdRetrieveZone(c *cli.Context) error {
 
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
 		// Print zone details only
-		fmt.Fprintln(c.App.Writer, "")
+		_, _ = fmt.Fprintln(c.App.Writer, "")
 		renderZoneTable(zoneResp, nil, c)
 		return nil
 	}
@@ -96,11 +96,11 @@ func cmdRetrieveZone(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError("failed to marshal JSON output", 1)
 		}
-		fmt.Fprintln(c.App.Writer, string(out))
+		_, _ = fmt.Fprintln(c.App.Writer, string(out))
 		return nil
 	}
 
-	fmt.Fprintln(c.App.Writer, "")
+	_, _ = fmt.Fprintln(c.App.Writer, "")
 	renderZoneTable(zoneResp, filteredRecords, c)
 
 	return nil

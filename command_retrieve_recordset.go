@@ -24,7 +24,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v11/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -33,14 +33,14 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("zonename is required"), 1)
 	}
 	zonename := c.Args().First()
 
 	// Validate required flags
 	if !c.IsSet("name") || !c.IsSet("type") {
-		cli.ShowCommandHelp(c, c.Command.Name)
+		_ = cli.ShowCommandHelp(c, c.Command.Name)
 		return cli.NewExitError(color.RedString("Recordset name and type are required"), 1)
 	}
 
@@ -108,15 +108,17 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(color.RedString("Failed to create output file: %s", err), 1)
 		}
-		defer f.Close()
-		f.WriteString(results)
-		f.Sync()
+		defer func() { _ = f.Close() }()
+		_, _ = f.WriteString(results)
+		if err := f.Sync(); err != nil {
+			return cli.NewExitError(color.RedString("failed to sync file: %s", err), 1)
+		}
 		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	}
 
-	fmt.Fprintln(c.App.Writer, "")
-	fmt.Fprintln(c.App.Writer, results)
+	_, _ = fmt.Fprintln(c.App.Writer, "")
+	_, _ = fmt.Fprintln(c.App.Writer, results)
 	return nil
 
 }
