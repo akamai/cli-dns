@@ -86,7 +86,7 @@ func cmdResultBulkZones(c *cli.Context) error {
 			}
 			results = string(jsonData)
 		} else {
-			results = renderBulkZonesResultTable(resultRespCreateList, c)
+			results = renderBulkZonesResultTable(resultRespCreateList)
 		}
 	} else {
 		resultRespDeleteList := make([]*dns.GetBulkZoneDeleteResultResponse, 0)
@@ -106,7 +106,7 @@ func cmdResultBulkZones(c *cli.Context) error {
 			}
 			results = string(jsonData)
 		} else {
-			results = renderBulkZonesResultTable(resultRespDeleteList, c)
+			results = renderBulkZonesResultTable(resultRespDeleteList)
 		}
 	}
 

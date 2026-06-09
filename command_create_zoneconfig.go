@@ -166,7 +166,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		}
 		result = string(b)
 	} else {
-		result = renderZoneconfigTable(zone, c)
+		result = renderZoneconfigTable(zone)
 	}
 
 	// Output to file or stdout

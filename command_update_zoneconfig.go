@@ -139,30 +139,30 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 
 		if c.IsSet("contractid") {
 			newZone.ContractID = c.String("contractid")
-		} else if zone != nil {
+		} else {
 			newZone.ContractID = zone.ContractID
 		}
 		if c.IsSet("master") {
 			newZone.Masters = c.StringSlice("master")
-		} else if zone != nil {
+		} else {
 			newZone.Masters = zone.Masters
 		}
 		if c.IsSet("comment") {
 			newZone.Comment = c.String("comment")
-		} else if zone != nil {
+		} else {
 			newZone.Comment = zone.Comment
 		}
 		if c.IsSet("signandserve") {
 			newZone.SignAndServe = c.Bool("signandserve")
-		} else if zone != nil {
+		} else {
 			newZone.SignAndServe = zone.SignAndServe
 		}
 		if c.IsSet("algorithm") {
 			newZone.SignAndServeAlgorithm = c.String("algorithm")
-		} else if zone != nil {
+		} else {
 			newZone.SignAndServeAlgorithm = zone.SignAndServeAlgorithm
 		}
-		if (zone != nil && zone.TSIGKey != nil) || c.IsSet("tsigname") || c.IsSet("tsigalgorithm") || c.IsSet("tsigsecret") {
+		if (zone.TSIGKey != nil) || c.IsSet("tsigname") || c.IsSet("tsigalgorithm") || c.IsSet("tsigsecret") {
 			if zone.TSIGKey != nil {
 				newZone.TSIGKey = &dns.TSIGKey{
 					Name:      zone.TSIGKey.Name,
@@ -185,12 +185,12 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		}
 		if c.IsSet("target") {
 			newZone.Target = c.String("target")
-		} else if zone != nil {
+		} else {
 			newZone.Target = zone.Target
 		}
 		if c.IsSet("endcustomerid") {
 			newZone.EndCustomerID = c.String("endcustomerid")
-		} else if zone != nil {
+		} else {
 			newZone.EndCustomerID = zone.EndCustomerID
 		}
 	}
@@ -246,7 +246,7 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		}
 		results = string(zjson)
 	} else {
-		results = renderZoneconfigTable(zone, c)
+		results = renderZoneconfigTable(zone)
 	}
 
 	// Write output to file or console

@@ -62,7 +62,7 @@ func renderRecordsetListTable(zone string, recordsets []dns.RecordSet) string {
 }
 
 // Zone table format
-func renderZoneconfigTable(zone *dns.GetZoneResponse, c *cli.Context) string {
+func renderZoneconfigTable(zone *dns.GetZoneResponse) string {
 
 	//bold := color.New(color.FgWhite, color.Bold)
 	outString := ""
@@ -128,6 +128,9 @@ func renderZoneconfigTable(zone *dns.GetZoneResponse, c *cli.Context) string {
 		}
 		if len(zone.LastModifiedDate) > 0 {
 			table.Append([]string{" ", "LastModifiedDate", zone.LastModifiedDate})
+		}
+		if len(zone.LastModifiedBy) > 0 {
+			table.Append([]string{" ", "LastModifiedBy", zone.LastModifiedBy})
 		}
 		table.Append([]string{" ", "VersionId", zone.VersionID})
 	}
@@ -279,7 +282,7 @@ func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.
 }
 
 // Bulk zone request status format
-func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse, c *cli.Context) string {
+func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse) string {
 
 	outString := ""
 	outString += fmt.Sprintln(" ")
@@ -310,7 +313,7 @@ func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse
 }
 
 // Bulk zone status format
-func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse, c *cli.Context) string {
+func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse) string {
 	outString := ""
 	outString += fmt.Sprintln(" ")
 	outString += fmt.Sprintln("Bulk Zones Request Status")
@@ -341,7 +344,7 @@ func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse, c *c
 }
 
 // Bulk zone result format
-func renderBulkZonesResultTable(resultRespList interface{}, c *cli.Context) string {
+func renderBulkZonesResultTable(resultRespList interface{}) string {
 
 	//bold := color.New(color.FgWhite, color.Bold)
 	var requestid string

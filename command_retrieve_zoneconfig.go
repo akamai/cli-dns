@@ -108,7 +108,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 			}
 			results = string(b)
 		} else {
-			results = renderZoneconfigTable(zone, c)
+			results = renderZoneconfigTable(zone)
 		}
 	}
 

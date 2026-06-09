@@ -117,7 +117,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 		}
 		results = string(zjson)
 	} else {
-		results = renderBulkZonesStatusTable(statusRespList, c)
+		results = renderBulkZonesStatusTable(statusRespList)
 	}
 
 	// Write output to file or console

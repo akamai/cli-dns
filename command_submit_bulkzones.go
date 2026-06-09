@@ -223,7 +223,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		}
 		results = string(jsonBytes)
 	} else {
-		results = renderBulkZonesRequestStatusTable(submitStatusList, c)
+		results = renderBulkZonesRequestStatusTable(submitStatusList)
 	}
 
 	// Write output either to output file or console
