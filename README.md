@@ -646,23 +646,22 @@ resulting in ./recordset_a.json would containing:
 ```
 
 ### Creating a Recordset
-
-The command `akamai dns create-recordset` is used to create a single recordset. Fields and values can be provided on the command line or input file.
+The command `akamai dns create-recordset` is used to create a single recordset.You must provide the record data either via command-line flags or an input file.
 
 The complete command line is:
 
 ```
-$ akamai dns create-recordset <zonename> [--json] [--suppress] [--output] [--name] [--type] [--ttl] [--rdata] [--file] 
+$ akamai dns create-recordset <zonename> ( --name <name> --type <type> [--ttl <ttl>] [--rdata <rdata>] | --file <file> ) [--json] [--suppress] [--output <file>]
 
 Flags: 
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --suppress     Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
    --output FILE  Output command results to FILE
-   --name NAME    Recordset NAME
-   --type TYPE    Recordset TYPE
+   --name NAME    Recordset NAME (Required if not using --file)
+   --type TYPE    Recordset TYPE (Required if not using --file)
    --ttl TTL      Recordset TTL (default: 0)
    --rdata RDATA  Recordset RDATA. Multiple flags allowed.
-   --file FILE    FILE path to JSON formatted recordset content
+   --file FILE    FILE path to JSON formatted recordset content (Required if not using --name and --type)
 ```
 
 To create a recordset via command line, the following would be invoked:
@@ -685,23 +684,22 @@ and result in the following output:
 ``` 
 
 ### Updating a Recordset
-
-The command `akamai dns update-recordset` is used to update a single existing recordset. Fields and values can be provided on the command line or input file.
+The command `akamai dns update-recordset` is used to update a single existing recordset. Fields and values can be provided directly on the command line or via an input file. You must use either the --name and --type flags, or the --file flag.
 
 The complete command line is:
 
 ```
-$ akamai dns update-recordset <zonename> [--json] [--suppress] [--output] [--name] [--type] [--ttl] [--rdata] [--file] 
+$ akamai dns update-recordset <zonename> ( --name <name> --type <type> [--ttl <ttl>] [--rdata <rdata>] | --file <file> ) [--json] [--suppress] [--output <file>]
 
 Flags: 
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --suppress     Suppress command result output. Overrides other output related flags [$AKAMAI_CLI_DNS_SUPPRESS]
    --output FILE  Output command results to FILE
-   --name NAME    Recordset NAME
-   --type TYPE    Recordset TYPE
+   --name NAME    Recordset NAME (Required if not using --file)
+   --type TYPE    Recordset TYPE (Required if not using --file)
    --ttl TTL      Recordset TTL (default: 0)
    --rdata RDATA  Record RDATA. Multiple flags allowed.
-   --file FILE    FILE path to JSON formatted recordset content. Allows multiple recordsets.
+   --file FILE    FILE path to JSON formatted recordset content (Required if not using --name and --type)
 ```
 
 An example recordset update using an input file would be as follows:
@@ -732,11 +730,11 @@ The command to delete a single recordset is `akamai dns delete-recordset`.
 The complete command line is:
 
 ```
-$ akamai dns delete-recordset <zonename> [--name] [--type] 
+$ akamai dns delete-recordset <zonename> --name <name> --type <type> 
 
 Flags: 
-   --name NAME    Recordset NAME
-   --type TYPE    Recordset TYPE
+   --name NAME    Recordset NAME (Required)
+   --type TYPE    Recordset TYPE (Required)
 ```
 
 ### Submit Bulk Zone Request
