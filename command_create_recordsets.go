@@ -24,7 +24,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -131,7 +131,7 @@ func cmdCreateRecordsets(c *cli.Context) error {
 		}
 		results = string(rjson)
 	} else {
-		results = renderRecordsetListTable(zonename, recordsetList.Recordsets)
+		results = renderRecordsetListTable(recordsetList.Recordsets)
 	}
 
 	// Write to file if output path is specified or print to stdout

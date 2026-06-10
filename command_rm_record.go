@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -87,7 +87,7 @@ func cmdRmRecord(c *cli.Context) error {
 			matching = append(matching, dns.RecordBody{
 				Name:       rec.Name,
 				RecordType: rec.Type,
-				TTL:        rec.TTL,
+				TTL:        intPtr(rec.TTL),
 				Target:     rec.Rdata,
 			})
 		}
@@ -105,7 +105,7 @@ func cmdRmRecord(c *cli.Context) error {
 
 		fmt.Printf("Multiple records matched for %s %s:\n", recordType, fqdn)
 		for _, rec := range matching {
-			fmt.Printf("- TTL: %d, RDATA: %v\n", rec.TTL, rec.Target)
+			fmt.Printf("- TTL: %d, RDATA: %v\n", intValue(rec.TTL), rec.Target)
 		}
 		fmt.Print("Are you sure you want to delete all matching records? [y/N]: ")
 		reader := bufio.NewReader(os.Stdin)

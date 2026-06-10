@@ -25,7 +25,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -87,7 +87,7 @@ func cmdAddRecord(c *cli.Context) error {
 	newrecord := &dns.RecordBody{
 		RecordType: recordType,
 		Name:       name,
-		TTL:        ttl,
+		TTL:        intPtr(ttl),
 		Target:     rdata,
 	}
 
@@ -103,7 +103,7 @@ func cmdAddRecord(c *cli.Context) error {
 		fmt.Println("Record already exists, updating it instead...")
 
 		//Merge TTL and RDATA values if needed
-		ttlChanged := existing.TTL != newrecord.TTL
+		ttlChanged := existing.TTL != intValue(newrecord.TTL)
 
 		rdataMap := map[string]bool{}
 		for _, r := range existing.Target {

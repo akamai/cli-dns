@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
@@ -24,20 +24,11 @@ func renderRecordsetTable(zone string, record *dns.GetRecordResponse) string {
 }
 
 // Recordsets list table format
-func renderRecordsetListTable(zone string, recordsets []dns.RecordSet) string {
+func renderRecordsetListTable(recordsets []dns.RecordSet) string {
 	var out strings.Builder
 	out.WriteString("\nZone Recordsets\n\n")
 	table := tablewriter.NewWriter(&out)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_LEFT})
-	table.SetHeader([]string{"NAME", "TYPE", "TTL", "RDATA"})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
-	table.SetCaption(true, fmt.Sprintf("Zone: %s", zone))
+	table.Header("NAME", "TYPE", "TTL", "RDATA")
 
 	if len(recordsets) == 0 {
 		rowData := []string{"No recordsets found", " ", " "}
@@ -57,7 +48,7 @@ func renderRecordsetListTable(zone string, recordsets []dns.RecordSet) string {
 			}
 		}
 	}
-	table.Render()
+	_ = table.Render()
 	return out.String()
 }
 
@@ -72,15 +63,7 @@ func renderZoneconfigTable(zone *dns.GetZoneResponse) string {
 
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetHeader([]string{"ZONE", "ATTRIBUTE", "VALUE"})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
+	table.Header("ZONE", "ATTRIBUTE", "VALUE")
 
 	if zone == nil {
 		rowData := []string{"No zone info to display", " ", " "}
@@ -134,7 +117,7 @@ func renderZoneconfigTable(zone *dns.GetZoneResponse) string {
 		}
 		table.Append([]string{" ", "VersionId", zone.VersionID})
 	}
-	table.Render()
+	_ = table.Render()
 	outString += fmt.Sprintln(tableString.String())
 
 	return outString
@@ -148,15 +131,7 @@ func renderZoneListTable(zones []dns.ZoneResponse) string {
 	outString += fmt.Sprintln(" ")
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetHeader([]string{"ZONE", "ATTRIBUTE", "VALUE"})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
+	table.Header("ZONE", "ATTRIBUTE", "VALUE")
 
 	if len(zones) == 0 {
 		rowData := []string{"No zones found", " ", " "}
@@ -197,7 +172,7 @@ func renderZoneListTable(zones []dns.ZoneResponse) string {
 			table.Append([]string{" ", " ", " "})
 		}
 	}
-	table.Render()
+	_ = table.Render()
 	outString += fmt.Sprintln(tableString.String())
 
 	return outString
@@ -209,11 +184,7 @@ func renderZoneSummaryListTable(zones []dns.ZoneResponse) string {
 	b.WriteString("\n Zone List Summary\n\n")
 
 	t := tablewriter.NewWriter(&b)
-	t.SetHeader([]string{"ZONE", "TYPE", "ACTIVATION STATE", "CONTRACT ID"})
-	t.SetAutoWrapText(false)
-	t.SetRowLine(true)
-	t.SetBorder(false)
-	t.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
+	t.Header("ZONE", "TYPE", "ACTIVATION STATE", "CONTRACT ID")
 
 	if len(zones) == 0 {
 		t.Append([]string{"No zones found", " ", " ", " "})
@@ -222,7 +193,7 @@ func renderZoneSummaryListTable(zones []dns.ZoneResponse) string {
 			t.Append([]string{z.Zone, z.Type, z.ActivationState, z.ContractID})
 		}
 	}
-	t.Render()
+	_ = t.Render()
 	return b.String()
 
 }
@@ -231,11 +202,7 @@ func renderZoneSummaryListTable(zones []dns.ZoneResponse) string {
 func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.Context) {
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-
-	table.SetHeader([]string{"Field", "value"})
+	table.Header("Field", "value")
 	table.Append([]string{"Zone", zone.Zone})
 	table.Append([]string{"Type", zone.Type})
 	table.Append([]string{"Masters", strings.Join(zone.Masters, ", ")})
@@ -255,7 +222,7 @@ func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.
 		table.Append([]string{"TSIG Secret", zone.TSIGKey.Secret})
 	}
 
-	table.Render()
+	_ = table.Render()
 	_, _ = fmt.Fprintln(c.App.Writer, tableString.String())
 
 	if len(records) > 0 {
@@ -265,9 +232,7 @@ func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.
 
 		recordsTableString := &strings.Builder{}
 		recordsTable := tablewriter.NewWriter(recordsTableString)
-		recordsTable.SetHeader([]string{"Name", "Type", "TTL", "Data"})
-		recordsTable.SetAutoWrapText(false)
-		recordsTable.SetRowLine(true)
+		recordsTable.Header("Name", "Type", "TTL", "Data")
 
 		for _, rec := range records {
 			for _, data := range rec.Rdata {
@@ -276,7 +241,7 @@ func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.
 				})
 			}
 		}
-		recordsTable.Render()
+		_ = recordsTable.Render()
 		_, _ = fmt.Fprintln(c.App.Writer, recordsTableString.String())
 	}
 }
@@ -290,14 +255,6 @@ func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse
 	outString += fmt.Sprintln(" ")
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
 
 	for i, submitStatus := range submitStatusList {
 		table.Append([]string{"Request Id", submitStatus.RequestID})
@@ -306,7 +263,7 @@ func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse
 			table.Append([]string{"", ""})
 		}
 	}
-	table.Render()
+	_ = table.Render()
 	outString += fmt.Sprintln(tableString.String())
 
 	return outString
@@ -320,14 +277,6 @@ func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse) stri
 	outString += fmt.Sprintln(" ")
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
 
 	for _, submitStatus := range submitStatusList {
 		table.Append([]string{"Request Id", submitStatus.RequestID, ""})
@@ -337,7 +286,7 @@ func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse) stri
 		table.Append([]string{"", "Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
 		table.Append([]string{"", "Expiration Date", submitStatus.ExpirationDate})
 	}
-	table.Render()
+	_ = table.Render()
 	outString += fmt.Sprintln(tableString.String())
 
 	return outString
@@ -359,14 +308,6 @@ func renderBulkZonesResultTable(resultRespList interface{}) string {
 	outString += fmt.Sprintln(" ")
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
-	table.SetReflowDuringAutoWrap(false)
-	table.SetAutoWrapText(false)
-	table.SetRowLine(true)
-	table.SetCenterSeparator(" ")
-	table.SetColumnSeparator(" ")
-	table.SetRowSeparator(" ")
-	table.SetBorder(false)
 
 	if resultList, ok := resultRespList.([]*dns.GetBulkZoneCreateResultResponse); ok {
 		for _, crreq := range resultList {
@@ -391,7 +332,7 @@ func renderBulkZonesResultTable(resultRespList interface{}) string {
 				}
 			}
 		}
-		table.Render()
+		_ = table.Render()
 		outString += fmt.Sprintln(tableString.String())
 
 		return outString
@@ -424,7 +365,7 @@ func renderBulkZonesResultTable(resultRespList interface{}) string {
 		}
 	}
 
-	table.Render()
+	_ = table.Render()
 	outString += fmt.Sprintln(tableString.String())
 
 	return outString

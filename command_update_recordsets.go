@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -174,7 +174,7 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		}
 		results = string(rjson)
 	} else {
-		results = renderRecordsetListTable(zonename, resp.RecordSets)
+		results = renderRecordsetListTable(resp.RecordSets)
 	}
 
 	// Write output to file or console

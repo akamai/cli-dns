@@ -23,7 +23,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -91,10 +91,10 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		}
 		newrecord.Name = newrecordset.Name
 		newrecord.RecordType = newrecordset.Type
-		if newrecord.TTL != newrecordset.TTL {
+		if !intPtrEqual(newrecord.TTL, intPtr(newrecordset.TTL)) {
 			setchange = true
 		}
-		newrecord.TTL = newrecordset.TTL
+		newrecord.TTL = intPtr(newrecordset.TTL)
 		sort.Strings(newrecord.Target)
 		sort.Strings(newrecordset.Rdata)
 		if !setchange && strings.Join(newrecord.Target, " ") != strings.Join(newrecordset.Rdata, " ") {
@@ -107,7 +107,7 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		newrecord.RecordType = strings.ToUpper(c.String("type"))
 		newrecord.Name = c.String("name")
 		if c.IsSet("ttl") {
-			newrecord.TTL = c.Int("ttl")
+			newrecord.TTL = intPtr(c.Int("ttl"))
 			setchange = true
 		}
 		if c.IsSet("rdata") {
@@ -131,7 +131,7 @@ func cmdUpdateRecordset(c *cli.Context) error {
 
 	if !c.IsSet("file") {
 		if !c.IsSet("ttl") {
-			newrecord.TTL = record.TTL
+			newrecord.TTL = intPtr(record.TTL)
 		}
 		if !c.IsSet("rdata") {
 			newrecord.Target = record.Target

@@ -19,6 +19,24 @@ import (
 	"github.com/urfave/cli"
 )
 
+func intPtr(v int) *int {
+	return &v
+}
+
+func intValue(v *int) int {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
+func intPtrEqual(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
 func setHelpTemplates() {
 	cli.AppHelpTemplate =
 		color.YellowString("Usage: \n") +

@@ -24,7 +24,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -92,7 +92,7 @@ func cmdCreateRecordset(c *cli.Context) error {
 		}
 		newrecord.Name = recordset.Name
 		newrecord.RecordType = recordset.Type
-		newrecord.TTL = recordset.TTL
+		newrecord.TTL = intPtr(recordset.TTL)
 		newrecord.Target = recordset.Rdata
 
 		// Construct recordset from CLI flags
@@ -103,7 +103,7 @@ func cmdCreateRecordset(c *cli.Context) error {
 		}
 		newrecord.RecordType = strings.ToUpper(c.String("type"))
 		newrecord.Name = c.String("name")
-		newrecord.TTL = c.Int("ttl")
+		newrecord.TTL = intPtr(c.Int("ttl"))
 		newrecord.Target = c.StringSlice("rdata")
 	} else {
 		_ = cli.ShowCommandHelp(c, c.Command.Name)
