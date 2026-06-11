@@ -30,6 +30,10 @@ import (
 )
 
 func cmdRetrieveZoneconfig(c *cli.Context) error {
+	failStep := func(step, message string, args ...interface{}) error {
+		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
+		return cli.NewExitError(color.RedString(message, args...), 1)
+	}
 
 	//fmt.Fprintf(os.Stderr, "Command %s", c.Command.Name)
 
@@ -38,7 +42,7 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing zone", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -47,9 +51,9 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 
 	// Validate zonename argument
 	if zonename == "" {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename required"), 1)
+		return failStep("Preparing zone", "zonename required")
 	}
+	fmt.Printf("Preparing zone ... %s\n", color.GreenString("[OK]"))
 
 	var (
 		outputPath string
@@ -64,30 +68,29 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		outputPath = filepath.FromSlash(c.String("output"))
 	}
 
-	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Zone..."))
-
 	zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err != nil {
 		if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
-			return cli.NewExitError(color.RedString("zone does not exist"), 1)
+			return failStep("Retrieving Zone", "zone does not exist")
 		}
-		return cli.NewExitError(color.RedString("failed to retrieve zone: %s", err), 1)
+		return failStep("Retrieving Zone", "failed to retrieve zone: %s", err)
 	}
+	fmt.Printf("Retrieving Zone ... %s\n", color.GreenString("[OK]"))
 
 	// Retrieve zone as master zone file
 	if isMasterfile {
 
 		// ALIAS zones do not support master file view
 		if strings.EqualFold(zone.Type, "ALIAS") {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("zone %s is an ALIAS zone and does not support master file retrieval", zonename)), 1)
+			return failStep("Retrieving Zone", "zone %s is an ALIAS zone and does not support master file retrieval", zonename)
 		}
 
 		content, err := dnsClient.GetMasterZoneFile(ctx, dns.GetMasterZoneFileRequest{Zone: zonename})
 		if err != nil {
 			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
-				return cli.NewExitError(color.RedString("zone doesn't exist"), 1)
+				return failStep("Retrieving Zone", "zone doesn't exist")
 			}
-			return cli.NewExitError(color.RedString("failed to retrieve master file: %s", err), 1)
+			return failStep("Retrieving Zone", "failed to retrieve master file: %s", err)
 		}
 		results = content
 	} else {
@@ -104,31 +107,31 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		if c.Bool("json") {
 			b, err := json.MarshalIndent(zone, "", " ")
 			if err != nil {
-				return cli.NewExitError(color.RedString("failed to marshal zone JSON"), 1)
+				return failStep("Assembling Zone Content", "failed to marshal zone JSON")
 			}
 			results = string(b)
 		} else {
 			results = renderZoneconfigTable(zone)
 		}
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Zone Content ... %s\n", color.GreenString("[OK]"))
 
 	// Write output to file or console
 	if outputPath != "" {
 		//fmt.Fprintf(os.Stderr, color.GreenString("Writing output to %s...\n", outputPath))
 		file, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString("failed to create output file: %s", err), 1)
+			return failStep("Writing Output", "failed to create output file: %s", err)
 		}
 		defer func() { _ = file.Close() }()
 
 		if _, err := file.WriteString(results); err != nil {
-			return cli.NewExitError(color.RedString("failed to write output to file"), 1)
+			return failStep("Writing Output", "failed to write output to file")
 		}
 		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	}
 
-	fmt.Println()
-	fmt.Println(results)
+	_, _ = fmt.Fprintln(c.App.Writer, results)
 	return nil
 }

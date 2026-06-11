@@ -87,7 +87,7 @@ func cmdAddRecord(c *cli.Context) error {
 	newrecord := &dns.RecordBody{
 		RecordType: recordType,
 		Name:       name,
-		TTL:        intPtr(ttl),
+		TTL:        &ttl,
 		Target:     rdata,
 	}
 

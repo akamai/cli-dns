@@ -87,7 +87,7 @@ func cmdRmRecord(c *cli.Context) error {
 			matching = append(matching, dns.RecordBody{
 				Name:       rec.Name,
 				RecordType: rec.Type,
-				TTL:        intPtr(rec.TTL),
+				TTL:        &rec.TTL,
 				Target:     rec.Rdata,
 			})
 		}

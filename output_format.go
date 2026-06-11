@@ -10,363 +10,355 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Recordset Table format
 func renderRecordsetTable(zone string, record *dns.GetRecordResponse) string {
-	return fmt.Sprintf(`
-    Zone: %s
-    Name: %s
-    Type: %s
-    TTL: %d
-    Rdata:
-      %s
-      `,
-		zone, record.Name, record.RecordType, record.TTL, strings.Join(record.Target, "\n "))
+	var sb strings.Builder
+	table := tablewriter.NewTable(&sb)
+	table.Header([]string{"ZONE", "NAME", "TYPE", "TTL", "RDATA"})
+	rdata := strings.Join(record.Target, ", ")
+	row := []string{
+		zone,
+		record.Name,
+		record.RecordType,
+		strconv.Itoa(record.TTL),
+		rdata,
+	}
+	table.Bulk([][]string{row})
+	table.Render()
+	return sb.String()
 }
 
 // Recordsets list table format
 func renderRecordsetListTable(recordsets []dns.RecordSet) string {
-	var out strings.Builder
-	out.WriteString("\nZone Recordsets\n\n")
-	table := tablewriter.NewWriter(&out)
-	table.Header("NAME", "TYPE", "TTL", "RDATA")
+	var sb strings.Builder
+	sb.WriteString("Zone Recordsets:\n")
+	table := tablewriter.NewTable(&sb)
+	table.Header([]string{"NAME", "TYPE", "TTL", "RDATA"})
 
+	var rows [][]string
 	if len(recordsets) == 0 {
-		rowData := []string{"No recordsets found", " ", " "}
-		table.Append(rowData)
+		rows = append(rows, []string{"No recordsets found", " ", " ", " "})
 	} else {
 		for _, set := range recordsets {
 			name := set.Name
 			typeVal := set.Type
 			ttl := strconv.Itoa(set.TTL)
-			//rdata := strings.Join(set.Rdata, ", ")
 			for i, rdata := range set.Rdata {
 				if i == 0 {
-					table.Append([]string{name, typeVal, ttl, rdata})
+					rows = append(rows, []string{name, typeVal, ttl, rdata})
 				} else {
-					table.Append([]string{" ", " ", " ", rdata})
+					rows = append(rows, []string{" ", " ", " ", rdata})
 				}
 			}
 		}
 	}
-	_ = table.Render()
-	return out.String()
+	table.Bulk(rows)
+	table.Render()
+	return sb.String()
 }
 
 // Zone table format
 func renderZoneconfigTable(zone *dns.GetZoneResponse) string {
+	var sb strings.Builder
+	sb.WriteString("Zone Configuration:\n")
 
-	//bold := color.New(color.FgWhite, color.Bold)
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Zone Configuration")
-	outString += fmt.Sprintln(" ")
+	table := tablewriter.NewTable(&sb)
+	table.Header([]string{"ZONE", "ATTRIBUTE", "VALUE"})
 
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.Header("ZONE", "ATTRIBUTE", "VALUE")
-
+	var rows [][]string
 	if zone == nil {
-		rowData := []string{"No zone info to display", " ", " "}
-		table.Append(rowData)
+		rows = append(rows, []string{"No zone info to display", " ", " "})
 	} else {
 		zname := zone.Zone
 		ztype := zone.Type
-		table.Append([]string{zname, "Type", ztype})
+		rows = append(rows, []string{zname, "Type", ztype})
 		if len(zone.Comment) > 0 {
-			table.Append([]string{" ", "Comment", zone.Comment})
+			rows = append(rows, []string{" ", "Comment", zone.Comment})
 		}
 		if len(zone.ContractID) > 0 {
-			table.Append([]string{" ", "ContractId", zone.ContractID})
+			rows = append(rows, []string{" ", "ContractId", zone.ContractID})
 		}
 		if strings.ToUpper(ztype) == "SECONDARY" {
 			if len(zone.Masters) > 0 {
 				masters := strings.Join(zone.Masters, " ,")
-				table.Append([]string{" ", "Masters", masters})
+				rows = append(rows, []string{" ", "Masters", masters})
 			}
 			if zone.TSIGKey != nil {
 				if len(zone.TSIGKey.Name) > 0 {
-					table.Append([]string{" ", "TsigKey:Name", zone.TSIGKey.Name})
+					rows = append(rows, []string{" ", "TsigKey:Name", zone.TSIGKey.Name})
 				}
 				if len(zone.TSIGKey.Algorithm) > 0 {
-					table.Append([]string{" ", "TsigKey:Algorithm", zone.TSIGKey.Algorithm})
+					rows = append(rows, []string{" ", "TsigKey:Algorithm", zone.TSIGKey.Algorithm})
 				}
 				if len(zone.TSIGKey.Secret) > 0 {
-					table.Append([]string{" ", "TsigKey:Secret", zone.TSIGKey.Secret})
+					rows = append(rows, []string{" ", "TsigKey:Secret", zone.TSIGKey.Secret})
 				}
 			}
 		}
 		if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
-			table.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
+			rows = append(rows, []string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
 			if len(zone.SignAndServeAlgorithm) > 0 {
-				table.Append([]string{" ", "SignAndServeAlgorithm", zone.SignAndServeAlgorithm})
+				rows = append(rows, []string{" ", "SignAndServeAlgorithm", zone.SignAndServeAlgorithm})
 			}
 		}
 		if strings.ToUpper(ztype) == "ALIAS" {
-			table.Append([]string{" ", "Target", zone.Target})
-			table.Append([]string{" ", "AliasCount", strconv.FormatInt(zone.AliasCount, 10)})
+			rows = append(rows, []string{" ", "Target", zone.Target})
+			rows = append(rows, []string{" ", "AliasCount", strconv.FormatInt(zone.AliasCount, 10)})
 		}
-		table.Append([]string{" ", "ActivationState", zone.ActivationState})
+		rows = append(rows, []string{" ", "ActivationState", zone.ActivationState})
 		if len(zone.LastActivationDate) > 0 {
-			table.Append([]string{" ", "LastActivationDate", zone.LastActivationDate})
+			rows = append(rows, []string{" ", "LastActivationDate", zone.LastActivationDate})
 		}
 		if len(zone.LastModifiedDate) > 0 {
-			table.Append([]string{" ", "LastModifiedDate", zone.LastModifiedDate})
+			rows = append(rows, []string{" ", "LastModifiedDate", zone.LastModifiedDate})
 		}
 		if len(zone.LastModifiedBy) > 0 {
-			table.Append([]string{" ", "LastModifiedBy", zone.LastModifiedBy})
+			rows = append(rows, []string{" ", "LastModifiedBy", zone.LastModifiedBy})
 		}
-		table.Append([]string{" ", "VersionId", zone.VersionID})
+		rows = append(rows, []string{" ", "VersionId", zone.VersionID})
 	}
-	_ = table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
+	table.Bulk(rows)
+	table.Render()
+	return sb.String()
 }
 
 // Zone list table format
 func renderZoneListTable(zones []dns.ZoneResponse) string {
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Zone List")
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.Header("ZONE", "ATTRIBUTE", "VALUE")
+	var sb strings.Builder
+	sb.WriteString("Zone List:\n")
 
+	table := tablewriter.NewTable(&sb)
+	table.Header([]string{"ZONE", "ATTRIBUTE", "VALUE"})
+
+	var rows [][]string
 	if len(zones) == 0 {
-		rowData := []string{"No zones found", " ", " "}
-		table.Append(rowData)
+		rows = append(rows, []string{"No zones found", " ", " "})
 	} else {
 		for _, zone := range zones {
 			zname := zone.Zone
 			ztype := zone.Type
-			table.Append([]string{zname, "Type", ztype})
+			rows = append(rows, []string{zname, "Type", ztype})
 			if len(zone.Comment) > 0 {
-				table.Append([]string{" ", "Comment", zone.Comment})
+				rows = append(rows, []string{" ", "Comment", zone.Comment})
 			}
 			if strings.ToUpper(ztype) == "SECONDARY" {
 				if len(zone.Masters) > 0 {
 					masters := strings.Join(zone.Masters, " ,")
-					table.Append([]string{" ", "Masters", masters})
+					rows = append(rows, []string{" ", "Masters", masters})
 				}
 				if zone.TSIGKey != nil {
-					table.Append([]string{" ", "TsigKey:Name", zone.TSIGKey.Name})
-					table.Append([]string{" ", "TsigKey:Algorithm", zone.TSIGKey.Algorithm})
-					table.Append([]string{" ", "TsigKey:Secret", zone.TSIGKey.Secret})
+					rows = append(rows, []string{" ", "TsigKey:Name", zone.TSIGKey.Name})
+					rows = append(rows, []string{" ", "TsigKey:Algorithm", zone.TSIGKey.Algorithm})
+					rows = append(rows, []string{" ", "TsigKey:Secret", zone.TSIGKey.Secret})
 				}
 			}
 			if strings.ToUpper(ztype) == "PRIMARY" || strings.ToUpper(ztype) == "SECONDARY" {
-				table.Append([]string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
+				rows = append(rows, []string{" ", "SignAndServe", fmt.Sprintf("%t", zone.SignAndServe)})
 				if len(zone.SignAndServeAlgorithm) > 0 {
-					table.Append([]string{" ", "SignAndServeAlgorithm", zone.SignAndServeAlgorithm})
+					rows = append(rows, []string{" ", "SignAndServeAlgorithm", zone.SignAndServeAlgorithm})
 				}
 			}
 			if strings.ToUpper(ztype) == "ALIAS" {
-				table.Append([]string{" ", "Target", zone.Target})
-				table.Append([]string{" ", "AliasCount", strconv.FormatInt(zone.AliasCount, 10)})
+				rows = append(rows, []string{" ", "Target", zone.Target})
+				rows = append(rows, []string{" ", "AliasCount", strconv.FormatInt(zone.AliasCount, 10)})
 			}
-			table.Append([]string{" ", "ActivationState", zone.ActivationState})
-			table.Append([]string{" ", "LastActivationDate", zone.LastActivationDate})
-			table.Append([]string{" ", "LastModifiedDate", zone.LastModifiedDate})
-			table.Append([]string{" ", "VersionId", zone.VersionID})
-			table.Append([]string{" ", " ", " "})
+			rows = append(rows, []string{" ", "ActivationState", zone.ActivationState})
+			rows = append(rows, []string{" ", "LastActivationDate", zone.LastActivationDate})
+			rows = append(rows, []string{" ", "LastModifiedDate", zone.LastModifiedDate})
+			rows = append(rows, []string{" ", "VersionId", zone.VersionID})
+			rows = append(rows, []string{" ", " ", " "})
 		}
 	}
-	_ = table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
+	table.Bulk(rows)
+	table.Render()
+	return sb.String()
 }
 
 // Zone list summary format
 func renderZoneSummaryListTable(zones []dns.ZoneResponse) string {
-	var b strings.Builder
-	b.WriteString("\n Zone List Summary\n\n")
+	var sb strings.Builder
+	sb.WriteString("Zone List Summary:\n")
 
-	t := tablewriter.NewWriter(&b)
-	t.Header("ZONE", "TYPE", "ACTIVATION STATE", "CONTRACT ID")
+	table := tablewriter.NewTable(&sb)
+	table.Header([]string{"ZONE", "TYPE", "ACTIVATION STATE", "CONTRACT ID"})
 
+	var rows [][]string
 	if len(zones) == 0 {
-		t.Append([]string{"No zones found", " ", " ", " "})
+		rows = append(rows, []string{"No zones found", " ", " ", " "})
 	} else {
 		for _, z := range zones {
-			t.Append([]string{z.Zone, z.Type, z.ActivationState, z.ContractID})
+			rows = append(rows, []string{z.Zone, z.Type, z.ActivationState, z.ContractID})
 		}
 	}
-	_ = t.Render()
-	return b.String()
-
+	table.Bulk(rows)
+	table.Render()
+	return sb.String()
 }
 
 // Zone table format
 func renderZoneTable(zone *dns.GetZoneResponse, records []dns.RecordSet, c *cli.Context) {
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.Header("Field", "value")
-	table.Append([]string{"Zone", zone.Zone})
-	table.Append([]string{"Type", zone.Type})
-	table.Append([]string{"Masters", strings.Join(zone.Masters, ", ")})
-	table.Append([]string{"Comment", zone.Comment})
-	table.Append([]string{"Contract ID", zone.ContractID})
-	table.Append([]string{"SignAndServe", fmt.Sprintf("%v", zone.SignAndServe)})
-	table.Append([]string{"Target", zone.Target})
-	table.Append([]string{"EndCustomerID", zone.EndCustomerID})
-	table.Append([]string{"Activation State", zone.ActivationState})
-	table.Append([]string{"Last Modified By", zone.LastModifiedBy})
-	table.Append([]string{"Last Modified Date", zone.LastModifiedDate})
-	table.Append([]string{"Version ID", zone.VersionID})
+	var sb strings.Builder
+	table := tablewriter.NewTable(&sb)
+	table.Header([]string{"Field", "value"})
+
+	var rows [][]string
+	rows = append(rows, []string{"Zone", zone.Zone})
+	rows = append(rows, []string{"Type", zone.Type})
+	rows = append(rows, []string{"Masters", strings.Join(zone.Masters, ", ")})
+	rows = append(rows, []string{"Comment", zone.Comment})
+	rows = append(rows, []string{"Contract ID", zone.ContractID})
+	rows = append(rows, []string{"SignAndServe", fmt.Sprintf("%v", zone.SignAndServe)})
+	rows = append(rows, []string{"Target", zone.Target})
+	rows = append(rows, []string{"EndCustomerID", zone.EndCustomerID})
+	rows = append(rows, []string{"Activation State", zone.ActivationState})
+	rows = append(rows, []string{"Last Modified By", zone.LastModifiedBy})
+	rows = append(rows, []string{"Last Modified Date", zone.LastModifiedDate})
+	rows = append(rows, []string{"Version ID", zone.VersionID})
 
 	if zone.TSIGKey != nil {
-		table.Append([]string{"TSIG Name", zone.TSIGKey.Name})
-		table.Append([]string{"TSIG Algorithm", zone.TSIGKey.Algorithm})
-		table.Append([]string{"TSIG Secret", zone.TSIGKey.Secret})
+		rows = append(rows, []string{"TSIG Name", zone.TSIGKey.Name})
+		rows = append(rows, []string{"TSIG Algorithm", zone.TSIGKey.Algorithm})
+		rows = append(rows, []string{"TSIG Secret", zone.TSIGKey.Secret})
 	}
-
-	_ = table.Render()
-	_, _ = fmt.Fprintln(c.App.Writer, tableString.String())
+	table.Bulk(rows)
+	table.Render()
+	_, _ = fmt.Fprintln(c.App.Writer, sb.String())
 
 	if len(records) > 0 {
-		_, _ = fmt.Fprintln(c.App.Writer, "")
 		_, _ = fmt.Fprintln(c.App.Writer, "DNS Records: ")
-		_, _ = fmt.Fprintln(c.App.Writer, "")
 
-		recordsTableString := &strings.Builder{}
-		recordsTable := tablewriter.NewWriter(recordsTableString)
-		recordsTable.Header("Name", "Type", "TTL", "Data")
+		var recSb strings.Builder
+		recordsTable := tablewriter.NewTable(&recSb)
+		recordsTable.Header([]string{"Name", "Type", "TTL", "Data"})
 
+		var recRows [][]string
 		for _, rec := range records {
 			for _, data := range rec.Rdata {
-				recordsTable.Append([]string{
+				recRows = append(recRows, []string{
 					rec.Name, rec.Type, fmt.Sprintf("%d", rec.TTL), data,
 				})
 			}
 		}
-		_ = recordsTable.Render()
-		_, _ = fmt.Fprintln(c.App.Writer, recordsTableString.String())
+		recordsTable.Bulk(recRows)
+		recordsTable.Render()
+		_, _ = fmt.Fprintln(c.App.Writer, recSb.String())
 	}
 }
 
 // Bulk zone request status format
 func renderBulkZonesRequestStatusTable(submitStatusList []*dns.BulkZonesResponse) string {
+	var sb strings.Builder
+	sb.WriteString("Bulk Zones Request Submission Status:\n")
 
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Bulk Zones Request Submission Status")
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
+	table := tablewriter.NewTable(&sb)
+	var rows [][]string
 
 	for i, submitStatus := range submitStatusList {
-		table.Append([]string{"Request Id", submitStatus.RequestID})
-		table.Append([]string{"Expiration Date", submitStatus.ExpirationDate})
+		rows = append(rows, []string{"Request Id", submitStatus.RequestID})
+		rows = append(rows, []string{"Expiration Date", submitStatus.ExpirationDate})
 		if i == len(submitStatusList)-1 {
-			table.Append([]string{"", ""})
+			rows = append(rows, []string{"", ""})
 		}
 	}
-	_ = table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
+	table.Bulk(rows)
+	table.Render()
+	return sb.String()
 }
 
 // Bulk zone status format
 func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse) string {
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln("Bulk Zones Request Status")
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
+	var sb strings.Builder
+	sb.WriteString("Bulk Zones Request Status:\n")
+
+	table := tablewriter.NewTable(&sb)
+	var rows [][]string
 
 	for _, submitStatus := range submitStatusList {
-		table.Append([]string{"Request Id", submitStatus.RequestID, ""})
-		table.Append([]string{"", "Zones Submitted", strconv.Itoa(submitStatus.ZonesSubmitted)})
-		table.Append([]string{"", "Success Count", strconv.Itoa(submitStatus.SuccessCount)})
-		table.Append([]string{"", "Failure Count", strconv.Itoa(submitStatus.FailureCount)})
-		table.Append([]string{"", "Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
-		table.Append([]string{"", "Expiration Date", submitStatus.ExpirationDate})
+		rows = append(rows, []string{"Request Id", submitStatus.RequestID, ""})
+		rows = append(rows, []string{"", "Zones Submitted", strconv.Itoa(submitStatus.ZonesSubmitted)})
+		rows = append(rows, []string{"", "Success Count", strconv.Itoa(submitStatus.SuccessCount)})
+		rows = append(rows, []string{"", "Failure Count", strconv.Itoa(submitStatus.FailureCount)})
+		rows = append(rows, []string{"", "Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
+		rows = append(rows, []string{"", "Expiration Date", submitStatus.ExpirationDate})
 	}
-	_ = table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
+	table.Bulk(rows)
+	table.Render()
+	return sb.String()
 }
 
 // Bulk zone result format
 func renderBulkZonesResultTable(resultRespList interface{}) string {
-
-	//bold := color.New(color.FgWhite, color.Bold)
+	var sb strings.Builder
 	var requestid string
 	var succzones []string
 	var failzones []dns.BulkFailedZone
-	op := "Created"
-	tableHeader := "Bulk Zones %s Request Results"
-
-	outString := ""
-	outString += fmt.Sprintln(" ")
-	outString += fmt.Sprintln(fmt.Sprintf(tableHeader, op))
-	outString += fmt.Sprintln(" ")
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
+	var rows [][]string
 
 	if resultList, ok := resultRespList.([]*dns.GetBulkZoneCreateResultResponse); ok {
+		op := "Created"
+		sb.WriteString(fmt.Sprintf("Bulk Zones %s Request Results\n", op))
+		table := tablewriter.NewTable(&sb)
+
 		for _, crreq := range resultList {
 			requestid = crreq.RequestID
 			succzones = crreq.SuccessfullyCreatedZones
 			failzones = crreq.FailedZones
-			table.Append([]string{"Request Id", requestid, "", ""})
-			table.Append([]string{"", fmt.Sprintf("Successfully %s Zones", op), "", ""})
+			rows = append(rows, []string{"Request Id", requestid, "", ""})
+			rows = append(rows, []string{"", fmt.Sprintf("Successfully %s Zones", op), "", ""})
 			if len(succzones) == 0 {
-				table.Append([]string{"", "", "None", ""})
+				rows = append(rows, []string{"", "", "None", ""})
 			} else {
 				for _, zn := range succzones {
-					table.Append([]string{"", "", zn, ""})
+					rows = append(rows, []string{"", "", zn, ""})
 				}
 			}
-			table.Append([]string{"", fmt.Sprintf("Failed %s Zones", op), "", ""})
+			rows = append(rows, []string{"", fmt.Sprintf("Failed %s Zones", op), "", ""})
 			if len(failzones) == 0 {
-				table.Append([]string{"", "", "None", ""})
+				rows = append(rows, []string{"", "", "None", ""})
 			} else {
 				for _, fzn := range failzones {
-					table.Append([]string{"", "", fzn.Zone, fzn.FailureReason})
+					rows = append(rows, []string{"", "", fzn.Zone, fzn.FailureReason})
 				}
 			}
 		}
-		_ = table.Render()
-		outString += fmt.Sprintln(tableString.String())
-
-		return outString
+		table.Bulk(rows)
+		table.Render()
+		return sb.String()
 	}
+
 	resultList, ok := resultRespList.([]*dns.GetBulkZoneDeleteResultResponse)
 	if !ok {
 		return "Unable to create result table"
 	}
+
+	op := "Deleted"
+	sb.WriteString(fmt.Sprintf("Bulk Zones %s Request Results\n", op))
+	table := tablewriter.NewTable(&sb)
+
 	for _, delreq := range resultList {
 		requestid = delreq.RequestID
 		succzones = delreq.SuccessfullyDeletedZones
 		failzones = delreq.FailedZones
-		op = "Deleted"
-		table.Append([]string{"Request Id", requestid, "", ""})
-		table.Append([]string{fmt.Sprintf("Successfully %s Zones", op), "", ""})
+
+		rows = append(rows, []string{"Request Id", requestid, "", ""})
+		rows = append(rows, []string{fmt.Sprintf("Successfully %s Zones", op), "", ""})
 		if len(succzones) == 0 {
-			table.Append([]string{"", "", "None", ""})
+			rows = append(rows, []string{"", "", "None", ""})
 		} else {
 			for _, zn := range succzones {
-				table.Append([]string{"", "", zn, ""})
+				rows = append(rows, []string{"", "", zn, ""})
 			}
 		}
-		table.Append([]string{fmt.Sprintf("Failed %s Zones", op), "", ""})
-		if len(succzones) == 0 {
-			table.Append([]string{"", "", "None", ""})
+		rows = append(rows, []string{fmt.Sprintf("Failed %s Zones", op), "", ""})
+		if len(failzones) == 0 {
+			rows = append(rows, []string{"", "", "None", ""})
 		} else {
 			for _, fzn := range failzones {
-				table.Append([]string{"", "", fzn.Zone, fzn.FailureReason})
+				rows = append(rows, []string{"", "", fzn.Zone, fzn.FailureReason})
 			}
 		}
 	}
 
-	_ = table.Render()
-	outString += fmt.Sprintln(tableString.String())
-
-	return outString
+	table.Bulk(rows)
+	table.Render()
+	return sb.String()
 }

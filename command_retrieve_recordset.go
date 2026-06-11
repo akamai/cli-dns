@@ -30,19 +30,22 @@ import (
 )
 
 func cmdRetrieveRecordset(c *cli.Context) error {
+	failStep := func(step, message string, args ...interface{}) error {
+		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
+		return cli.NewExitError(color.RedString(message, args...), 1)
+	}
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename is required"), 1)
+		return failStep("Preparing recordset", "zonename is required")
 	}
 	zonename := c.Args().First()
 
 	// Validate required flags
 	if !c.IsSet("name") || !c.IsSet("type") {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("Recordset name and type are required"), 1)
+		return failStep("Preparing recordset", "Recordset name and type are required")
 	}
+	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 
 	name := c.String("name")
 	rstype := c.String("type")
@@ -57,7 +60,7 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing recordset", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -67,13 +70,12 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+		return failStep("Preparing recordset", "Failed to retrieve zone information for %s. Error: %s", zonename, err)
 	}
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
+		return failStep("Preparing recordset", "Zone %s is an ALIAS zone and cannot have recordsets", zonename)
 	}
 
-	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Recordset..."))
 	record, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
 		Zone:       zonename,
 		RecordType: rstype,
@@ -81,12 +83,12 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 	})
 	if err != nil {
 		if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
-			return cli.NewExitError(color.RedString("Recordset not found"), 1)
+			return failStep("Retrieving Recordset", "Recordset not found")
 		}
-		return cli.NewExitError(color.RedString("Failed to retrieve recordset: %s", err), 1)
+		return failStep("Retrieving Recordset", "Failed to retrieve recordset: %s", err)
 	}
+	fmt.Printf("Retrieving Recordset ... %s\n", color.GreenString("[OK]"))
 
-	fmt.Fprintln(os.Stderr, color.BlueString("Assembling Recordset Output..."))
 	var results string
 	if c.Bool("json") {
 		rs := &dns.RecordSet{
@@ -97,28 +99,28 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 		}
 		b, err := json.MarshalIndent(rs, "", " ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to format JSON: %s", err), 1)
+			return failStep("Assembling Recordset Content", "Unable to format JSON: %s", err)
 		}
 		results = string(b)
 	} else {
 		results = renderRecordsetTable(zonename, record)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Recordset Content ... %s\n", color.GreenString("[OK]"))
+
 	if outputPath != "" {
 		f, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString("Failed to create output file: %s", err), 1)
+			return failStep("Writing Output", "Failed to create output file: %s", err)
 		}
 		defer func() { _ = f.Close() }()
 		_, _ = f.WriteString(results)
 		if err := f.Sync(); err != nil {
-			return cli.NewExitError(color.RedString("failed to sync file: %s", err), 1)
+			return failStep("Writing Output", "failed to sync file: %s", err)
 		}
 		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	}
 
-	_, _ = fmt.Fprintln(c.App.Writer, "")
 	_, _ = fmt.Fprintln(c.App.Writer, results)
 	return nil
-
 }

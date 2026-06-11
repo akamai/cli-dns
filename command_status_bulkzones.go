@@ -29,13 +29,17 @@ import (
 )
 
 func cmdStatusBulkZones(c *cli.Context) error {
+	failStep := func(step, message string, args ...interface{}) error {
+		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
+		return cli.NewExitError(color.RedString(message, args...), 1)
+	}
 
 	// Initialize context Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing bulk zones status request", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -49,14 +53,14 @@ func cmdStatusBulkZones(c *cli.Context) error {
 	// Retrieve request IDs from CLI flags
 	requestids = c.StringSlice("requestid")
 	if len(requestids) < 1 {
-		return cli.NewExitError(color.RedString("requestid(s) required. "), 1)
+		return failStep("Preparing bulk zones status request", "requestid(s) required")
 	}
 
-	fmt.Println("Preparing bulk zones status request ", "")
+	fmt.Printf("Preparing bulk zones status request ... %s\n", color.GreenString("[OK]"))
 
 	// Validate that either --create or --delete is set
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
-		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
+		return failStep("Preparing bulk zones status request", "Either create or delete arg is required")
 	}
 	if c.IsSet("delete") {
 		op = "delete"
@@ -68,7 +72,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 
 	var statusResp *dns.BulkStatusResponse
 	statusRespList := make([]*dns.BulkStatusResponse, 0)
-	fmt.Println("Submitting Bulk Zones request(s)  ", "")
+	fmt.Printf("Submitting Bulk Zones request(s) ... %s\n", color.GreenString("[OK]"))
 
 	// Loop through all provided request IDs
 	for _, requestid := range requestids {
@@ -78,7 +82,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 				RequestID: requestid,
 			})
 			if err != nil {
-				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Create Status query failed: %s", err)), 1)
+				return failStep("Submitting Bulk Zones request(s)", "Bulk Zone Create Status query failed: %s", err)
 			}
 			statusResp = &dns.BulkStatusResponse{
 				RequestID:      r.RequestID,
@@ -94,7 +98,7 @@ func cmdStatusBulkZones(c *cli.Context) error {
 				RequestID: requestid,
 			})
 			if err != nil {
-				return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Delete Status query failed: %s", err)), 1)
+				return failStep("Submitting Bulk Zones request(s)", "Bulk Zone Delete Status query failed: %s", err)
 			}
 			statusResp = &dns.BulkStatusResponse{
 				RequestID:      r.RequestID,
@@ -109,11 +113,11 @@ func cmdStatusBulkZones(c *cli.Context) error {
 	}
 
 	results := ""
-	fmt.Println("Assembling Bulk Zone Response Content ", "")
+	fmt.Printf("Assembling Bulk Zone Response Content ... %s\n", color.GreenString("[OK]"))
 	if c.IsSet("json") && c.Bool("json") {
 		zjson, err := json.MarshalIndent(statusRespList, "", "  ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to process status response(s)"), 1)
+			return failStep("Assembling Bulk Zone Response Content", "Unable to process status response(s)")
 		}
 		results = string(zjson)
 	} else {
@@ -125,18 +129,17 @@ func cmdStatusBulkZones(c *cli.Context) error {
 		//fmt.Printf("Writing Output to %s ", outputPath)
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())
 		}
 		defer func() { _ = zfHandle.Close() }()
 		_, err = zfHandle.WriteString(string(results))
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
+			return failStep("Writing Output", "Unable to write zone output to file")
 		}
 		_ = zfHandle.Sync()
 		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
-		_, _ = fmt.Fprintln(c.App.Writer, "")
 		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 

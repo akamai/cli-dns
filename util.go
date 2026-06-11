@@ -19,10 +19,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-func intPtr(v int) *int {
-	return &v
-}
-
 func intValue(v *int) int {
 	if v == nil {
 		return 0
