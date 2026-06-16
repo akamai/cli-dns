@@ -1,6 +1,15 @@
 # Release Notes
 
-# Release Notes
+## Version 0.8.0 
+
+### Features/Enhancementsß
+
+* Upgrade to Edgegrid v13.2.0
+* Update documentation and --help for recordset commands to enforce mutually exclusive options (filename or recordname+recordtype)
+* Add LastModifiedBy field to Zoneconfig table output
+* Standardize command status/failure messaging ([OK/FAIL]) and table rendering format
+* Update project license file
+* Migrate to go 1.26.4
 
 ## Version 0.7.0 (January 2026)
 

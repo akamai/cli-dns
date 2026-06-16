@@ -45,7 +45,6 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 	if !c.IsSet("name") || !c.IsSet("type") {
 		return failStep("Preparing recordset", "Recordset name and type are required")
 	}
-	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 
 	name := c.String("name")
 	rstype := c.String("type")
@@ -75,6 +74,7 @@ func cmdRetrieveRecordset(c *cli.Context) error {
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
 		return failStep("Preparing recordset", "Zone %s is an ALIAS zone and cannot have recordsets", zonename)
 	}
+	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 
 	record, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
 		Zone:       zonename,

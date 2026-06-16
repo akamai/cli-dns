@@ -602,13 +602,13 @@ The command `akamai dns retrieve-recordset` is used to retrieve a single records
 The complete command line is:
 
 ```
-$ akamai dns retrieve-recordset <zonename> [--json] [--output] [--name] [--type] 
+$ akamai dns retrieve-recordset <zonename> [--json] [--output] --name <name> --type <type>  
 
 Flags: 
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --output FILE  Output command results to FILE
-   --name NAME    Recordset NAME
-   --type TYPE    Recordset TYPE
+   --name NAME    Recordset NAME (Required)
+   --type TYPE    Recordset TYPE (Required)
 ```
 
 A recordset retrieval example is the following:

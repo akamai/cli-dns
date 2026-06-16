@@ -81,13 +81,13 @@ func cmdCreateRecordsets(c *cli.Context) error {
 		return failStep("Preparing recordsets", "Input file is required")
 	}
 	fmt.Printf("Preparing recordsets ... %s\n", color.GreenString("[OK]"))
-	fmt.Printf("Fetching Recordset data ... %s\n", color.GreenString("[OK]"))
 
 	// Read and parse input JSON file
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
 		return failStep("Fetching Recordset data", "Failed to read input file")
 	}
+	fmt.Printf("Fetching Recordset data ... %s\n", color.GreenString("[OK]"))
 
 	var wrapper struct {
 		RecordSets []dns.RecordSet `json:"recordsets"`

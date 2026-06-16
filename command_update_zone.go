@@ -51,7 +51,6 @@ func cmdUpdateZone(c *cli.Context) error {
 		return failStep("Preparing zone", "zonename is required")
 	}
 	zonename := c.Args().First()
-	fmt.Printf("Preparing zone ... %s\n", color.GreenString("[OK]"))
 
 	// Check if the zone is an ALIAS zone
 	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
@@ -63,6 +62,7 @@ func cmdUpdateZone(c *cli.Context) error {
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
 		return failStep("Preparing zone", "Zone %s is an ALIAS zone and does not have recordsets", zonename)
 	}
+	fmt.Printf("Preparing zone ... %s\n", color.GreenString("[OK]"))
 
 	var (
 		inputPath  string
@@ -100,7 +100,6 @@ func cmdUpdateZone(c *cli.Context) error {
 			return failStep("Uploading Master Zone File", "Master Zone File size too large to process")
 		}
 
-		fmt.Printf("Uploading Master Zone File ... %s\n", color.GreenString("[OK]"))
 		err = dnsClient.PostMasterZoneFile(ctx, dns.PostMasterZoneFileRequest{
 			Zone:     zonename,
 			FileData: masterZoneFileData,
@@ -108,6 +107,7 @@ func cmdUpdateZone(c *cli.Context) error {
 		if err != nil {
 			return failStep("Uploading Master Zone File", "Master Zone File upload failed: %v", err)
 		}
+		fmt.Printf("Uploading Master Zone File ... %s\n", color.GreenString("[OK]"))
 		return nil
 	}
 
@@ -188,7 +188,6 @@ func cmdUpdateZone(c *cli.Context) error {
 		}
 	}
 
-	fmt.Printf("Updating Recordsets ... %s\n", color.GreenString("[OK]"))
 	err = dnsClient.UpdateRecordSets(ctx, dns.UpdateRecordSetsRequest{
 		Zone:       zonename,
 		RecordSets: &dns.RecordSets{RecordSets: recordsetWorkList},
@@ -197,19 +196,20 @@ func cmdUpdateZone(c *cli.Context) error {
 	if err != nil {
 		return failStep("Updating Recordsets", "Recordset update failed: %v", err)
 	}
+	fmt.Printf("Updating Recordsets ... %s\n", color.GreenString("[OK]"))
 
 	if c.Bool("suppress") {
 		return nil
 	}
 
 	// Retrieve and display updated recordsets
-	fmt.Fprintf(os.Stderr, "Retrieving updated records ... %s\n", color.GreenString("[OK]"))
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 		Zone: zonename,
 	})
 	if err != nil {
 		return failStep("Retrieving updated records", "Failed to retrieve recordsets after update: %v", err)
 	}
+	fmt.Fprintf(os.Stderr, "Retrieving updated records ... %s\n", color.GreenString("[OK]"))
 
 	var results string
 	if c.Bool("json") {

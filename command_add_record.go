@@ -31,11 +31,14 @@ import (
 )
 
 func cmdAddRecord(c *cli.Context) error {
+	failStep := func(step, message string, args ...interface{}) error {
+		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
+		return cli.NewExitError(color.RedString(message, args...), 1)
+	}
 
 	//Validate postional arguments; record type and zone name
 	if c.NArg() < 2 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("record type and zonename are required"), 1)
+		return failStep("Preparing recordset", "record type and zonename are required")
 	}
 
 	recordType := strings.ToUpper(c.Args().Get(0))
@@ -43,8 +46,7 @@ func cmdAddRecord(c *cli.Context) error {
 
 	//validate required flags
 	if !c.IsSet("name") || !c.IsSet("rdata") || !c.IsSet("ttl") {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("--name, --rdata and --ttl are required"), 1)
+		return failStep("Preparing recordset", "--name, --rdata and --ttl are required")
 	}
 
 	name := c.String("name")
@@ -52,7 +54,7 @@ func cmdAddRecord(c *cli.Context) error {
 		name = fmt.Sprintf("%s.%s", name, zonename)
 	}
 	if !strings.HasSuffix(name, "."+zonename) {
-		return cli.NewExitError(color.RedString("record name must be within the zone %s", zonename), 1)
+		return failStep("Preparing recordset", "record name must be within the zone %s", zonename)
 	}
 
 	ttl := c.Int("ttl")
@@ -66,7 +68,7 @@ func cmdAddRecord(c *cli.Context) error {
 	ctx := context.Background()
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing recordset", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -76,12 +78,13 @@ func cmdAddRecord(c *cli.Context) error {
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+		return failStep("Preparing recordset", "Failed to retrieve zone information for %s. Error: %s", zonename, err)
 	}
 
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
+		return failStep("Preparing recordset", "Zone %s is an ALIAS zone and cannot have recordsets", zonename)
 	}
+	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 
 	// Define new record
 	newrecord := &dns.RecordBody{
@@ -99,9 +102,6 @@ func cmdAddRecord(c *cli.Context) error {
 	})
 
 	if err == nil && existing.RecordType != "" {
-
-		fmt.Println("Record already exists, updating it instead...")
-
 		//Merge TTL and RDATA values if needed
 		ttlChanged := existing.TTL != intValue(newrecord.TTL)
 
@@ -120,7 +120,7 @@ func cmdAddRecord(c *cli.Context) error {
 
 		changed := ttlChanged || strings.Join(existing.Target, "") != strings.Join(mergedRdata, "")
 		if !changed {
-			fmt.Println(color.BlueString("No changes to update."))
+			_, _ = fmt.Fprintln(c.App.Writer, "No recordset change detected")
 			return nil
 		}
 
@@ -137,18 +137,20 @@ func cmdAddRecord(c *cli.Context) error {
 			Record: updateRecord,
 		})
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset update failed. Error: %s", err)), 1)
+			return failStep("Updating Recordset", "Recordset update failed. Error: %s", err)
 		}
+		fmt.Printf("Updating Recordset ... %s\n", color.GreenString("[OK]"))
 	} else {
 		// Create a new record
-		fmt.Println(color.BlueString("Creating new recordset..."))
+
 		err = dnsClient.CreateRecord(ctx, dns.CreateRecordRequest{
 			Zone:   zonename,
 			Record: newrecord,
 		})
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset create failed. Error: %s", err)), 1)
+			return failStep("Creating Recordset", "Recordset create failed. Error: %s", err)
 		}
+		fmt.Printf("Creating Recordset ... %s\n", color.GreenString("[OK]"))
 	}
 
 	// Retrieve record after creation/update
@@ -158,14 +160,15 @@ func cmdAddRecord(c *cli.Context) error {
 		Name:       newrecord.Name,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read recordset content. Error: %s", err.Error())), 1)
+		return failStep("Verifying Recordset", "Failed to read recordset content. Error: %s", err.Error())
 	}
+	fmt.Printf("Verifying Recordset ... %s\n", color.GreenString("[OK]"))
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
 
 	//Output the recordset
-	fmt.Println(color.BlueString("Assembling recordset Content... ", ""))
+
 	var results string
 	if c.IsSet("json") && c.Bool("json") {
 		recordset := &dns.RecordSet{
@@ -176,28 +179,28 @@ func cmdAddRecord(c *cli.Context) error {
 		}
 		zjson, err := json.MarshalIndent(recordset, "", "  ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to marshal recordset"), 1)
+			return failStep("Assembling Recordset Content", "Unable to marshal recordset")
 		}
 		results = string(zjson)
 	} else {
 		results = renderRecordsetTable(zonename, record)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Recordset Content ... %s\n", color.GreenString("[OK]"))
 
 	if len(outputPath) > 1 {
 		//fmt.Println(color.GreenString("Writing output to %s", outputPath))
 		rsHandle, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())
 		}
 		defer func() { _ = rsHandle.Close() }()
 		_, err = rsHandle.WriteString(results)
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
+			return failStep("Writing Output", "Unable to write zone output to file")
 		}
 		_ = rsHandle.Sync()
-		fmt.Println(color.GreenString("Output written to %s", outputPath))
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	} else {
-		_, _ = fmt.Fprintln(c.App.Writer, "")
 		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 

@@ -158,8 +158,6 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 
 	submitStatusList := make([]*dns.BulkZonesResponse, 0)
 
-	fmt.Printf("Submitting Bulk Zones request ... %s\n", color.GreenString("[OK]"))
-
 	// Handling bulk create in batches
 	if op == "create" {
 		ZonesMax := len(newBulkZones.Zones)
@@ -217,6 +215,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 			ExpirationDate: resp.ExpirationDate,
 		})
 	}
+	fmt.Printf("Submitting Bulk Zones request ... %s\n", color.GreenString("[OK]"))
 
 	// Format results in JSON or table format
 	results := ""
@@ -229,6 +228,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 	} else {
 		results = renderBulkZonesRequestStatusTable(submitStatusList)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Bulk Zone Request Status ... %s\n", color.GreenString("[OK]"))
 
 	// Write output either to output file or console
 	if len(outputPath) < 1 {
@@ -244,6 +244,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 	if _, err := file.WriteString(results); err != nil {
 		return failStep("Writing Output", "failed to write output")
 	}
+	fmt.Fprintf(os.Stderr, "Writing Output ... %s\n", color.GreenString("[OK]"))
 
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil

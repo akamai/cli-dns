@@ -118,7 +118,7 @@ func cmdUpdateRecordset(c *cli.Context) error {
 			newrecord.Target = c.StringSlice("rdata")
 			setchange = true
 		}
-		fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
+
 	} else {
 		return failStep("Preparing recordset", "Recordset field values or input file are required")
 	}
@@ -147,7 +147,7 @@ func cmdUpdateRecordset(c *cli.Context) error {
 		return nil
 	}
 
-	fmt.Printf("Updating Recordset ... %s\n", color.GreenString("[OK]"))
+	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 
 	// Update recordset
 	err = dnsClient.UpdateRecord(ctx, dns.UpdateRecordRequest{

@@ -1,11 +1,11 @@
 {
   "requirements": {
-    "go": "1.25.0"
+    "go": "1.26.4"
   },
   "commands": [
     {
       "name": "dns",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "description": "Manage DNS zones with Edge DNS",
       "bin": "https://github.com/akamai/cli-dns/releases/download/{{.Version}}/akamai-{{.Name}}-{{.Version}}-{{.OS}}{{.Arch}}{{.BinSuffix}}",
       "auto-complete": true

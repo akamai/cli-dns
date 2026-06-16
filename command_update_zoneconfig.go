@@ -236,7 +236,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		return nil
 	}
 	results := ""
-	fmt.Fprintf(os.Stderr, "Assembling Zone Content ... %s\n", color.GreenString("[OK]"))
 
 	// Format output either as JSON or table format
 	if c.IsSet("json") && c.Bool("json") {
@@ -245,8 +244,14 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 			return failStep("Assembling Zone Content", "Unable to display zone")
 		}
 		results = string(zjson)
+		fmt.Fprintf(os.Stderr, "Assembling Zone Content ... %s\n", color.GreenString("[OK]"))
 	} else {
-		results = renderZoneconfigTable(zone)
+		fmt.Fprintf(os.Stderr, "Assembling Zone Content ... %s\n", color.GreenString("[OK]"))
+		renderZoneTable(zone, nil, c)
+		if len(outputPath) > 1 {
+			return failStep("Writing Output", "table format output cannot be written to file")
+		}
+		return nil
 	}
 
 	// Write output to file or console

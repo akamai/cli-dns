@@ -7,6 +7,7 @@ import (
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/urfave/cli"
 )
 
@@ -61,7 +62,15 @@ func renderZoneconfigTable(zone *dns.GetZoneResponse) string {
 	var sb strings.Builder
 	sb.WriteString("Zone Configuration:\n")
 
-	table := tablewriter.NewTable(&sb)
+	table := tablewriter.NewTable(&sb, tablewriter.WithConfig(tablewriter.Config{
+		Row: tw.CellConfig{
+			Alignment: tw.CellAlignment{Global: tw.AlignLeft},
+		},
+		Header: tw.CellConfig{
+			Alignment: tw.CellAlignment{Global: tw.AlignLeft},
+		},
+	}))
+
 	table.Header([]string{"ZONE", "ATTRIBUTE", "VALUE"})
 
 	var rows [][]string
@@ -116,6 +125,7 @@ func renderZoneconfigTable(zone *dns.GetZoneResponse) string {
 		}
 		rows = append(rows, []string{" ", "VersionId", zone.VersionID})
 	}
+
 	table.Bulk(rows)
 	table.Render()
 	return sb.String()
@@ -164,6 +174,7 @@ func renderZoneListTable(zones []dns.ZoneResponse) string {
 			rows = append(rows, []string{" ", "ActivationState", zone.ActivationState})
 			rows = append(rows, []string{" ", "LastActivationDate", zone.LastActivationDate})
 			rows = append(rows, []string{" ", "LastModifiedDate", zone.LastModifiedDate})
+			rows = append(rows, []string{" ", "LastModifiedBy", zone.LastModifiedBy})
 			rows = append(rows, []string{" ", "VersionId", zone.VersionID})
 			rows = append(rows, []string{" ", " ", " "})
 		}

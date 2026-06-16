@@ -79,7 +79,6 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 	} else {
 		return failStep("Preparing recordsets", "Input file is required")
 	}
-	fmt.Printf("Preparing recordsets ... %s\n", color.GreenString("[OK]"))
 
 	// Parse input JSON file
 	data, err := os.ReadFile(filepath.FromSlash(inputPath))
@@ -102,8 +101,9 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 			return failStep("Preparing recordsets", "Failed to parse json file content")
 		}
 		recordsetWorkList = recordsets.RecordSets
+		fmt.Printf("Preparing recordsets ... %s\n", color.GreenString("[OK]"))
 	} else {
-		fmt.Fprintf(os.Stderr, "Retrieving Existing Recordsets ... %s\n", color.GreenString("[OK]"))
+
 		resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 			Zone: zonename,
 			QueryArgs: &dns.RecordSetQueryArgs{
@@ -113,8 +113,7 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		if err != nil {
 			return failStep("Retrieving Existing Recordsets", "Recordset List retrieval failed. Error: %s", err.Error())
 		}
-
-		fmt.Fprintf(os.Stderr, "Processing Updated Recordsets ... %s\n", color.GreenString("[OK]"))
+		fmt.Fprintf(os.Stderr, "Retrieving Existing Recordsets ... %s\n", color.GreenString("[OK]"))
 		recordsetWorkList = resp.RecordSets
 
 		// Merge changes from input file
@@ -141,10 +140,11 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 			soavals[2] = strconv.Itoa(v + 1)
 			recordsetWorkList[soaIndex].Rdata[0] = strings.Join(soavals, " ")
 		}
+		fmt.Fprintf(os.Stderr, "Processing Updated Recordsets ... %s\n", color.GreenString("[OK]"))
 	}
 
 	// Submit recordset updates
-	fmt.Printf("Updating Recordsets ... %s\n", color.GreenString("[OK]"))
+
 	recordsets.RecordSets = recordsetWorkList
 	err = dnsClient.UpdateRecordSets(ctx, dns.UpdateRecordSetsRequest{
 		Zone:       zonename,
@@ -158,16 +158,16 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
-
+	fmt.Printf("Updating Recordsets ... %s\n", color.GreenString("[OK]"))
 	// Fetch full updated list
-	fmt.Fprintf(os.Stderr, "Retrieving Recordsets List ... %s\n", color.GreenString("[OK]"))
+
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 		Zone: zonename,
 	})
 	if err != nil {
 		return failStep("Retrieving Recordsets List", "Recordset List retrieval failed. Error: %s", err.Error())
 	}
-
+	fmt.Fprintf(os.Stderr, "Retrieving Recordsets List ... %s\n", color.GreenString("[OK]"))
 	results := ""
 
 	// Format output as JSON or table format

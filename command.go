@@ -161,11 +161,11 @@ func GetCommands() []cli.Command {
 		Flags: append(baseV11BaseFlags,
 			cli.StringFlag{
 				Name:  "name",
-				Usage: "Recordset `NAME`",
+				Usage: "Recordset `NAME` (Required)",
 			},
 			cli.StringFlag{
 				Name:  "type",
-				Usage: "Recordset `TYPE`",
+				Usage: "Recordset `TYPE` (Required)",
 			},
 		),
 	})
