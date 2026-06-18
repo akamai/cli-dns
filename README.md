@@ -25,7 +25,7 @@ for your system, or by cloning this repository and compiling it yourself.
 
 ### Compiling from Source
 
-If you want to compile the package from source, you will need Go 1.25 or later installed:
+If you want to compile the package from source, you will need Go 1.26.4 or later installed:
 
 1. Create a clone of the target repository:
    `git clone https://github.com/akamai/cli-dns.git`
