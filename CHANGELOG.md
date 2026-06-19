@@ -2,7 +2,7 @@
 
 ## Version 0.8.0 
 
-### Features/Enhancementsß
+### Features/Enhancements
 
 * Upgrade to Edgegrid v13.2.0
 * Update documentation and --help for recordset commands to enforce mutually exclusive options (filename or recordname+recordtype)
