@@ -284,12 +284,12 @@ func renderBulkZonesStatusTable(submitStatusList []*dns.BulkStatusResponse) stri
 	var rows [][]string
 
 	for _, submitStatus := range submitStatusList {
-		rows = append(rows, []string{"Request Id", submitStatus.RequestID, ""})
-		rows = append(rows, []string{"", "Zones Submitted", strconv.Itoa(submitStatus.ZonesSubmitted)})
-		rows = append(rows, []string{"", "Success Count", strconv.Itoa(submitStatus.SuccessCount)})
-		rows = append(rows, []string{"", "Failure Count", strconv.Itoa(submitStatus.FailureCount)})
-		rows = append(rows, []string{"", "Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
-		rows = append(rows, []string{"", "Expiration Date", submitStatus.ExpirationDate})
+		rows = append(rows, []string{"Request Id", submitStatus.RequestID})
+		rows = append(rows, []string{"Zones Submitted", strconv.Itoa(submitStatus.ZonesSubmitted)})
+		rows = append(rows, []string{"Success Count", strconv.Itoa(submitStatus.SuccessCount)})
+		rows = append(rows, []string{"Failure Count", strconv.Itoa(submitStatus.FailureCount)})
+		rows = append(rows, []string{"Complete", fmt.Sprintf("%t", submitStatus.IsComplete)})
+		rows = append(rows, []string{"Expiration Date", submitStatus.ExpirationDate})
 	}
 	table.Bulk(rows)
 	table.Render()
@@ -313,21 +313,27 @@ func renderBulkZonesResultTable(resultRespList interface{}) string {
 			requestid = crreq.RequestID
 			succzones = crreq.SuccessfullyCreatedZones
 			failzones = crreq.FailedZones
-			rows = append(rows, []string{"Request Id", requestid, "", ""})
-			rows = append(rows, []string{"", fmt.Sprintf("Successfully %s Zones", op), "", ""})
+			rows = append(rows, []string{"Request Id", requestid})
 			if len(succzones) == 0 {
-				rows = append(rows, []string{"", "", "None", ""})
+				rows = append(rows, []string{fmt.Sprintf("Successfully %s Zones", op), "None"})
 			} else {
-				for _, zn := range succzones {
-					rows = append(rows, []string{"", "", zn, ""})
+				for i, zn := range succzones {
+					if i == 0 {
+						rows = append(rows, []string{fmt.Sprintf("Successfully %s Zones", op), zn})
+					} else {
+						rows = append(rows, []string{"", zn})
+					}
 				}
 			}
-			rows = append(rows, []string{"", fmt.Sprintf("Failed %s Zones", op), "", ""})
 			if len(failzones) == 0 {
-				rows = append(rows, []string{"", "", "None", ""})
+				rows = append(rows, []string{fmt.Sprintf("Failed %s Zones", op), "None"})
 			} else {
-				for _, fzn := range failzones {
-					rows = append(rows, []string{"", "", fzn.Zone, fzn.FailureReason})
+				for i, fzn := range failzones {
+					if i == 0 {
+						rows = append(rows, []string{fmt.Sprintf("Failed %s Zones", op), fzn.Zone + ": " + fzn.FailureReason})
+					} else {
+						rows = append(rows, []string{"", fzn.Zone + ": " + fzn.FailureReason})
+					}
 				}
 			}
 		}
@@ -350,21 +356,27 @@ func renderBulkZonesResultTable(resultRespList interface{}) string {
 		succzones = delreq.SuccessfullyDeletedZones
 		failzones = delreq.FailedZones
 
-		rows = append(rows, []string{"Request Id", requestid, "", ""})
-		rows = append(rows, []string{fmt.Sprintf("Successfully %s Zones", op), "", ""})
+		rows = append(rows, []string{"Request Id", requestid})
 		if len(succzones) == 0 {
-			rows = append(rows, []string{"", "", "None", ""})
+			rows = append(rows, []string{fmt.Sprintf("Successfully %s Zones", op), "None"})
 		} else {
-			for _, zn := range succzones {
-				rows = append(rows, []string{"", "", zn, ""})
+			for i, zn := range succzones {
+				if i == 0 {
+					rows = append(rows, []string{fmt.Sprintf("Successfully %s Zones", op), zn})
+				} else {
+					rows = append(rows, []string{"", zn})
+				}
 			}
 		}
-		rows = append(rows, []string{fmt.Sprintf("Failed %s Zones", op), "", ""})
 		if len(failzones) == 0 {
-			rows = append(rows, []string{"", "", "None", ""})
+			rows = append(rows, []string{fmt.Sprintf("Failed %s Zones", op), "None"})
 		} else {
-			for _, fzn := range failzones {
-				rows = append(rows, []string{"", "", fzn.Zone, fzn.FailureReason})
+			for i, fzn := range failzones {
+				if i == 0 {
+					rows = append(rows, []string{fmt.Sprintf("Failed %s Zones", op), fzn.Zone + ": " + fzn.FailureReason})
+				} else {
+					rows = append(rows, []string{"", fzn.Zone + ": " + fzn.FailureReason})
+				}
 			}
 		}
 	}
