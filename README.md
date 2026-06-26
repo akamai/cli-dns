@@ -121,20 +121,19 @@ $akamai dns list-zoneconfig --type primary --json
 would result in the following output:
 
 ```
-{
-  "Zones": [
-    {
-      "zone": "example.com",
-      "type": "PRIMARY",
-      "signAndServe": false,
-      "contractId": "1-ABC123",
-      "activationState": "NEW",
-      "lastModifiedBy": "jsmith",
-      "lastModifiedDate": "2020-06-05T21:05:04.298125Z",
-      "versionId": "60a1f29b-85e8-44e0-a921-2bcae8728f75"
-    }
-  ]
-}
+Preparing zone list ... [OK]
+[
+  {
+    "zone": "example.com",
+    "type": "PRIMARY",
+    "signAndServe": false,
+    "contractId": "1-ABC123",
+    "activationState": "NEW",
+    "lastModifiedBy": "jsmith",
+    "lastModifiedDate": "2020-06-05T21:05:04.298125Z",
+    "versionId": "60a1f29b-85e8-44e0-a921-2bcae8728f75"
+  }
+]
 ```
 
 To generate a summary list of zones containing specific text, the `--search` and `--summary` flags would be used. For example:
@@ -146,12 +145,15 @@ $ akamai dns list-zoneconfig --search example --summary
 would result in the following output:
 
 ```
-Zone List Summary
- 
-                   ZONE                     TYPE     ACTIVATION STATE   CONTRACT ID  
-                                                                                     
-  example.com                              PRIMARY         NEW           1-3CV382    
-``` 
+Preparing zone list ... [OK]
+Zone List Summary:
+
+┌─────────────┬─────────┬──────────────────┬─────────────┐
+│    ZONE     │  TYPE   │ ACTIVATION STATE │ CONTRACT ID │
+├─────────────┼─────────┼──────────────────┼─────────────┤
+│ example.com │ PRIMARY │ NEW              │ 1-3CV382    │
+└─────────────┴─────────┴──────────────────┴─────────────┘
+```
 
 ### Retrieving a Zone Configuration
 
@@ -177,6 +179,9 @@ $ akamai dns retrieve-zoneconfig example.com --json
 would result in the following output:
 
 ```
+Preparing zone ... [OK]
+Retrieving Zone ... [OK]
+Assembling Zone Content ... [OK]
 {
   "zone": "example.com",
   "type": "PRIMARY",
@@ -187,20 +192,16 @@ would result in the following output:
   "lastModifiedBy": "jsmith",
   "lastModifiedDate": "2020-06-09T18:06:01.266155Z",
   "versionId": "a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e"
-} 
+}
 ```
 
 To retrieve the master zone file and output to the console, an example would be:
 
 ```
 $ akamai dns retrieve-zoneconfig xxx_primary_test.com --dns
-Retrieving Zone
-Retrieving Zone  ... [OK]
-
-Assembling Zone Content
+Preparing zone ... [OK]
+Retrieving Zone ... [OK]
 Assembling Zone Content ... [OK]
-
-
 ;; File Generated at 2020-10-21T21:22:58.672933Z
 ;; Last Modified at 2020-10-19T14:54:56.407659Z[UTC]
 ;; Version Identifier 166415f9-0744-4acc-9ca1-84173df6f69d
@@ -252,21 +253,24 @@ $ akamai dns create-zoneconfig example_primary.com --type primary --contractid 1
 would create the zone with the following output:
 
 ```
-Zone Configuration
- 
-           ZONE               ATTRIBUTE                      VALUE                  
-                                                                                    
-  example_primary.com      Type               PRIMARY                               
-                           
-                           ContractId         1-ABC123
-                                                                                    
-                           SignAndServe       false                                 
-                                                                                    
-                           ActivationState    PENDING                               
-                                                                                    
-                           LastModifiedDate   2020-06-09T18:06:01.266155Z           
-                                                                                    
-                           VersionId          a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e  
+Preparing zone ... [OK]
+Checking Zone Existence ... [OK]
+Creating Zone ... [OK]
+Verifying Zone ... [OK]
+Assembling Zone Content ... [OK]
+Zone Configuration:
+
+┌─────────────────────┬──────────────────┬──────────────────────────────────────┐
+│ ZONE                │ ATTRIBUTE        │ VALUE                                │
+├─────────────────────┼──────────────────┼──────────────────────────────────────┤
+│ example_primary.com │ Type             │ PRIMARY                              │
+│                     │ ContractId       │ 1-ABC123                             │
+│                     │ SignAndServe     │ false                                │
+│                     │ ActivationState  │ PENDING                              │
+│                     │ LastModifiedDate │ 2020-06-09T18:06:01.266155Z          │
+│                     │ LastModifiedBy   │ jsmith                               │
+│                     │ VersionId        │ a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e │
+└─────────────────────┴──────────────────┴──────────────────────────────────────┘
 ```
 
 To create a secondary zone with a Tsig Key and comment and but suppress output via file input, the following command would be specified:
@@ -335,32 +339,32 @@ $ akamai dns update-zoneconfig example_primary.com --type primary --comment "Thi
 would update the zone and provide the following output:
 
 ```
-Zone Configuration
+Preparing zone ... [OK]
+Updating Zone ... [OK]
+Verifying Zone ... [OK]
+Assembling Zone Content ... [OK]
+Zone Configuration:
 
-           ZONE               ATTRIBUTE                      VALUE
-
-  example_primary.com      Type               PRIMARY
-
-                           Comment            This is a comment
-
-                           ContractId         1-ABC123
-
-                           SignAndServe       false
-
-                           ActivationState    PENDING
-
-                           LastModifiedDate   2020-06-09T18:06:01.266155Z
-
-                           VersionId          a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e
+┌─────────────────────┬──────────────────┬──────────────────────────────────────┐
+│ ZONE                │ ATTRIBUTE        │ VALUE                                │
+├─────────────────────┼──────────────────┼──────────────────────────────────────┤
+│ example_primary.com │ Type             │ PRIMARY                              │
+│                     │ Comment          │ This is a comment                    │
+│                     │ ContractId       │ 1-ABC123                             │
+│                     │ SignAndServe     │ false                                │
+│                     │ ActivationState  │ PENDING                              │
+│                     │ LastModifiedDate │ 2020-06-09T18:06:01.266155Z          │
+│                     │ LastModifiedBy   │ jsmith                               │
+│                     │ VersionId        │ a0b4730e-fbbe-40ad-96b3-ac6a4cbadb1e │
+└─────────────────────┴──────────────────┴──────────────────────────────────────┘
 ```
 
 To update the master zone file (previously retrieved), an example would be:
 
 ```
 $ akamai dns update-zoneconfig xxx_primary_test.com --dns --file ./master_file
-Preparing zone for update
-Updating Master Zone File
-Updating Master Zone File ... [OK]
+Preparing zone ... [OK]
+Uploading Master Zone File ... [OK]
 ```
 
 where ./master_file contains the following:
@@ -405,25 +409,22 @@ $ akamai dns list-recordsets example.com --type soa --type ns
 With the following output:
 
 ```
-Zone Recordsets
- 
-              NAME                TYPE    TTL                                             RDATA                                           
-                                                                                                                                           
-  example.com                     NS     86400   a1-98.akam.net.                                                                           
-                                                                                                                                           
-                                                 a12-65.akam.net.                                                                          
-                                                                                                                                           
-                                                 a13-65.akam.net.                                                                          
-                                                                                                                                           
-                                                 a2-64.akam.net.                                                                           
-                                                                                                                                           
-                                                 a3-64.akam.net.                                                                           
-                                                                                                                                           
-                                                 a4-65.akam.net.                                                                           
-                                                                                                                                           
-  example.com                     SOA    86400   a1-98.akam.net. hostmaster.example.com. 2020060510 3600 600 604800 300  
-                                                                                                                                           
-Zone: example.com
+Preparing recordsets ... [OK]
+Retrieving Recordsets List ... [OK]
+Assembling Recordsets List ... [OK]
+Zone Recordsets:
+
+┌─────────────┬──────┬───────┬────────────────────────────────────────────────────────────────────────┐
+│    NAME     │ TYPE │  TTL  │                                 RDATA                                  │
+├─────────────┼──────┼───────┼────────────────────────────────────────────────────────────────────────┤
+│ example.com │ NS   │ 86400 │ a1-98.akam.net.                                                        │
+│             │      │       │ a12-65.akam.net.                                                       │
+│             │      │       │ a13-65.akam.net.                                                       │
+│             │      │       │ a2-64.akam.net.                                                        │
+│             │      │       │ a3-64.akam.net.                                                        │
+│             │      │       │ a4-65.akam.net.                                                        │
+│ example.com │ SOA  │ 86400 │ a1-98.akam.net. hostmaster.example.com. 2020060510 3600 600 604800 300 │
+└─────────────┴──────┴───────┴────────────────────────────────────────────────────────────────────────┘
 ```
 
 A similar example, sorting by recordset type and outputting in json format, would be the following:
@@ -435,6 +436,9 @@ $ akamai dns list-recordsets example.com --sortby type --json
 and result on the following result: 
 
 ```
+Preparing recordsets ... [OK]
+Retrieving Recordsets List ... [OK]
+Assembling Recordsets List ... [OK]
 {
   "Recordsets": [
     {
@@ -523,6 +527,11 @@ where the file file `new_recordsets.json` contains:
 would result in the following output:
 
 ```
+Preparing recordsets ... [OK]
+Fetching Recordset data ... [OK]
+Creating Recordsets ... [OK]
+Retrieving Recordsets List ... [OK]
+Assembling Recordsets List ... [OK]
 {
   "Recordsets": [
     {
@@ -590,8 +599,8 @@ $ akamai dns update-recordsets --file new_recordsets.json --overwrite
 resulting in the following error output. [The expected result being to remove the SOA record!] :
 
 ```
+Preparing recordsets ... [OK]
 Updating Recordsets ... [FAIL]
-
 Recordset update failed. Error: Zone "example.com" validation failed: [SOA record set is required for zone example.com]
 ```
 
@@ -602,13 +611,13 @@ The command `akamai dns retrieve-recordset` is used to retrieve a single records
 The complete command line is:
 
 ```
-$ akamai dns retrieve-recordset <zonename> [--json] [--output] --name <name> --type <type>  
+$ akamai dns retrieve-recordset <zonename> [--json] [--output] [--name] [--type] 
 
 Flags: 
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
    --output FILE  Output command results to FILE
-   --name NAME    Recordset NAME (Required)
-   --type TYPE    Recordset TYPE (Required)
+   --name NAME    Recordset NAME
+   --type TYPE    Recordset TYPE
 ```
 
 A recordset retrieval example is the following:
@@ -620,11 +629,15 @@ $ akamai dns retrieve-recordset egl_clidns_primary_test_1.com --name a_rs_exampl
 would result in the following output:
 
 ```
-                     NAME                       TYPE   TTL     RDATA    
-                                                                        
-  a_rs_example.com                               A     900   10.0.0.20  
-                                                                        
-Zone: a_rs_example.com
+Preparing recordset ... [OK]
+Retrieving Recordset ... [OK]
+Assembling Recordset Content ... [OK]
+
+┌───────────────────────────────┬──────────────────┬──────┬─────┬───────────┐
+│             ZONE              │       NAME       │ TYPE │ TTL │   RDATA   │
+├───────────────────────────────┼──────────────────┼──────┼─────┼───────────┤
+│ egl_clidns_primary_test_1.com │ a_rs_example.com │ A    │ 900 │ 10.0.0.20 │
+└───────────────────────────────┴──────────────────┴──────┴─────┴───────────┘
 ```
 
 The following example would direct output to a file:
@@ -632,6 +645,10 @@ The following example would direct output to a file:
 
 ```
 $ akamai dns retrieve-recordset egl_clidns_primary_test_1.com --name a_rs_example.com --type A --output ./recordset_a.json
+Preparing recordset ... [OK]
+Retrieving Recordset ... [OK]
+Assembling Recordset Content ... [OK]
+Output written to ./recordset_a.json
 ```
 
 resulting in ./recordset_a.json would containing:
@@ -646,6 +663,7 @@ resulting in ./recordset_a.json would containing:
 ```
 
 ### Creating a Recordset
+
 The command `akamai dns create-recordset` is used to create a single recordset.You must provide the record data either via command-line flags or an input file.
 
 The complete command line is:
@@ -673,6 +691,11 @@ $ akamai dns create-recordset example.com --name a_record_example.com --type A -
 and result in the following output:
 
 ```
+Preparing recordset ... [OK]
+Checking Recordset Existence ... [OK]
+Creating Recordset ... [OK]
+Verifying Recordset ... [OK]
+Assembling Recordset Content ... [OK]
 {
   "name": "a_record_example.com",
   "type": "A",
@@ -684,6 +707,7 @@ and result in the following output:
 ``` 
 
 ### Updating a Recordset
+
 The command `akamai dns update-recordset` is used to update a single existing recordset. Fields and values can be provided directly on the command line or via an input file. You must use either the --name and --type flags, or the --file flag.
 
 The complete command line is:
@@ -764,23 +788,20 @@ An example create submit request  would be as follows:
 
 ```
 $ akamai dns submit-bulkzones --create --contractid 1-3CV382 --groupid 18432 --file bulkcreate.json
-Preparing bulk zones submit request
-Submitting Bulk Zones request
-Submitting Bulk Zones request  ... [OK]
-
-Assembling Bulk Zone Response Content
+Preparing bulk zones request ... [OK]
+Using groupid: 18432
+Submitting Bulk Zones request ... [OK]
 Assembling Bulk Zone Response Content ... [OK]
-
-Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62
 Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62 ... [OK]
+Bulk Zones Request Submission Status:
 
+┌─────────────────┬──────────────────────────────────────┐
+│ Request Id      │ f3fcbf11-1b03-420e-9e2b-88cd0096fa62 │
+│ Expiration Date │ 2020-10-27T13:23:20.042484Z          │
+│                 │                                      │
+└─────────────────┴──────────────────────────────────────┘
 
-
-Bulk Zones Request Submission Status
-
-  Request Id        f3fcbf11-1b03-420e-9e2b-88cd0096fa62
-
-  Expiration Date   2020-10-27T13:23:20.042484Z
+Output written to Bulk_Submit_Request_Status_1781525800.json
 ```
 
 where the file `./bulkcreate.json` contains:
@@ -814,23 +835,18 @@ An example delete submit request would be as follows:
 
 ```
 $ akamai dns submit-bulkzones --delete --file bulkdelete.json
-Preparing bulk zones submit request
-Submitting Bulk Zones request
-Submitting Bulk Zones request  ... [OK]
-
-Assembling Bulk Zone Response Content
+PPreparing bulk zones result request ... [OK]
+Fetching Bulk Zone Delete Results ... [OK]
 Assembling Bulk Zone Response Content ... [OK]
+Bulk Zones Deleted Request Results
 
-Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62
-Writing Request Status to bulkSubmitRequest.f3fcbf11-1b03-420e-9e2b-88cd0096fa62 ... [OK]
+┌─────────────────┬──────────────────────────────────────┐
+│ Request Id      │ f3fcbf11-1b03-420e-9e2b-88cd0096fa62 │
+│ Expiration Date │ 2020-10-27T13:23:20.042484Z          │
+│                 │                                      │
+└─────────────────┴──────────────────────────────────────┘
 
-
-
-Bulk Zones Request Submission Status
-
-  Request Id        f3fcbf11-1b03-420e-9e2b-88cd0096fa62
-
-  Expiration Date   2020-10-27T13:23:20.042484Z
+Output written to Bulk_Submit_Request_Status_1781525009.json
 ```
 
 where the file `./bulkdelete.json` contains:
@@ -865,14 +881,9 @@ An example status check for a request would be as follows:
 
 ```
 $ akamai dns status-bulkzones --create --requestid 309679b5-1ab1-4837-9666-0019d1be891e --json
-Preparing bulk zones status request(s)
-Submitting Bulk Zones request 
-Submitting Bulk Zones request  ... [OK]
-
-Assembling Bulk Zone Response Content
+Preparing bulk zones status request ... [OK]
+Submitting Bulk Zones request(s) ... [OK]
 Assembling Bulk Zone Response Content ... [OK]
-
-
 [
     {
         "requestId": "309679b5-1ab1-4837-9666-0019d1be891e",
@@ -889,40 +900,29 @@ An example status check for multiple request ids would be as follows:
 
 ```
 $ akamai dns status-bulkzones --create --requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 --requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc
-Preparing bulk zones status request(s)
-Submitting Bulk Zones request
-Submitting Bulk Zones request  ... [OK]
-
-Assembling Bulk Zone Response Content
+Preparing bulk zones status request ... [OK]
+Submitting Bulk Zones request(s) ... [OK]
 Assembling Bulk Zone Response Content ... [OK]
+Bulk Zones Request Status:
 
 
+┌─────────────────┬──────────────────────────────────────┐
+│ Request Id      │ 15bc138f-8d82-451b-80b7-a56b88ffc474 │
+│ Zones Submitted │ 2                                    │
+│ Success Count   │ 0                                    │
+│ Failure Count   │ 2                                    │
+│ Complete        │ true                                 │
+│ Expiration Date │ 2020-10-28T17:10:04.515792Z          │
+└─────────────────┴──────────────────────────────────────┘
 
-Bulk Zones Request Status
-
-  Request Id   15bc138f-8d82-451b-80b7-a56b88ffc474
-
-               Zones Submitted                        2
-
-               Success Count                          0
-
-               Failure Count                          2
-
-               Complete                               true
-
-               Expiration Date                        2020-10-28T17:10:04.515792Z
-
- Request Id   0c22641b-7a30-44be-8fdd-092bf875f3bc
-
-               Zones Submitted                        2
-
-               Success Count                          0
-
-               Failure Count                          2
-
-               Complete                               true
-
-               Expiration Date                        2020-10-28T17:10:05.613474Z
+┌─────────────────┬──────────────────────────────────────┐
+│ Request Id      │ 0c22641b-7a30-44be-8fdd-092bf875f3bc │
+│ Zones Submitted │ 2                                    │
+│ Success Count   │ 0                                    │
+│ Failure Count   │ 2                                    │
+│ Complete        │ true                                 │
+│ Expiration Date │ 2020-10-28T17:10:05.613474Z          │
+└─────────────────┴──────────────────────────────────────┘
 ```
 
 ### Get Bulk Zone Request Result
@@ -947,14 +947,9 @@ An example result retrieval for a request would be as follows:
 
 ```
 $ akamai dns result-bulkzones --delete --requestid f3fcbf11-1b03-420e-9e2b-88cd0096fa62 --json
-Preparing bulk zones result request(s)
-Submitting Bulk Zones request
-Submitting Bulk Zones request  ... [OK]
-
-Assembling Bulk Zone Response Content
+Preparing bulk zones result request(s) ... [OK]
+Fetching Bulk Zone Delete Results ... [OK]
 Assembling Bulk Zone Response Content ... [OK]
-
-
 [
     {
         "requestId": "f3fcbf11-1b03-420e-9e2b-88cd0096fa62",
@@ -971,14 +966,9 @@ An example result retrieval for multiple request ids would be as follows:
 
 ```
 $ akamai dns result-bulkzones --create --requestid 15bc138f-8d82-451b-80b7-a56b88ffc474 --requestid 0c22641b-7a30-44be-8fdd-092bf875f3bc -json
-Preparing bulk zones result request(s)
-Submitting Bulk Zones request
-Submitting Bulk Zones request  ... [OK]
-
-Assembling Bulk Zone Response Content
+Preparing bulk zones result request(s) ... [OK]
+Fetching Bulk Zone Create Results ... [OK]
 Assembling Bulk Zone Response Content ... [OK]
-
-
 [
   {
     "requestId": "15bc138f-8d82-451b-80b7-a56b88ffc474",
@@ -1022,6 +1012,10 @@ You can also output the result as JSON, by adding the `--json` flag:
 
 ```sh
 $ akamai dns retrieve-zone example.org --filter A --filter AAAA --json
+```
+```
+Preparing zone ... [OK]
+Retrieving Zone ... [OK]
 ```
 ```json
 {
