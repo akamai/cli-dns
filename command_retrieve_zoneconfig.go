@@ -94,15 +94,6 @@ func cmdRetrieveZoneconfig(c *cli.Context) error {
 		}
 		results = content
 	} else {
-		// Retrieve zone in structured format
-		/*zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
-		if err != nil {
-			if dnsErr, ok := err.(*dns.Error); ok && dnsErr.StatusCode == 404 {
-				return cli.NewExitError(color.RedString("zone does not exist"), 1)
-			}
-			return cli.NewExitError(fmt.Sprintf(color.RedString("failed to retrieve zone: %s", err)), 1)
-		}*/
-
 		// Output as JSON or table format
 		if c.Bool("json") {
 			b, err := json.MarshalIndent(zone, "", " ")

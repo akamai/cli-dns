@@ -138,7 +138,6 @@ func cmdCreateRecordsets(c *cli.Context) error {
 
 	// Write to file if output path is specified or print to stdout
 	if len(outputPath) > 1 {
-		//fmt.Println(color.GreenString("Writing Output to %s", outputPath))
 		rlfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())

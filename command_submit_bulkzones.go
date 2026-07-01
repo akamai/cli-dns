@@ -151,11 +151,6 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		return failStep("Preparing bulk zones request", "Failed to parse json file content into bulk zones object")
 	}
 
-	/*var (
-		submitStatusList []*dns.CreateBulkZonesResponse
-		deleteResp       *dns.DeleteBulkZonesResponse
-	)*/
-
 	submitStatusList := make([]*dns.BulkZonesResponse, 0)
 
 	// Handling bulk create in batches

@@ -60,8 +60,6 @@ func cmdRetrieveZone(c *cli.Context) error {
 	}
 	fmt.Printf("Retrieving Zone ... %s\n", color.GreenString("[OK]"))
 
-	//fmt.Fprintln(c.App.Writer, fmt.Sprintf(" [%s]", color.GreenString("OK")))
-
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
 		// Print zone details only
 		renderZoneTable(zoneResp, nil, c)

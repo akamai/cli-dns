@@ -130,9 +130,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 		fmt.Printf("Retrieved Zone:\n%s\n", string(zoneJson))
 	}
 
-	/*payload, _ := json.MarshalIndent(newZone, "", "  ")
-	fmt.Println("Payload to be sent:\n", string(payload))*/
-
 	// Handling update using CLI flags
 	if c.IsSet("type") && !c.IsSet("file") {
 		newZone.Zone = zonename
@@ -212,7 +209,6 @@ func cmdUpdateZoneconfig(c *cli.Context) error {
 	//fmt.Printf("DEBUG: updating zone: '%s'\n", newZone.Zone)
 
 	err = dns.ValidateZone(newZone)
-
 	if err != nil {
 		return failStep("Updating Zone", "Invalid value provided for zone. Error: %s", err.Error())
 	}

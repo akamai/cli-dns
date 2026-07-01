@@ -188,7 +188,6 @@ func cmdAddRecord(c *cli.Context) error {
 	fmt.Fprintf(os.Stderr, "Assembling Recordset Content ... %s\n", color.GreenString("[OK]"))
 
 	if len(outputPath) > 1 {
-		//fmt.Println(color.GreenString("Writing output to %s", outputPath))
 		rsHandle, err := os.Create(outputPath)
 		if err != nil {
 			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())

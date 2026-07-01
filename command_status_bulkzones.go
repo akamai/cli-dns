@@ -126,7 +126,6 @@ func cmdStatusBulkZones(c *cli.Context) error {
 
 	// Write output to file or console
 	if len(outputPath) > 1 {
-		//fmt.Printf("Writing Output to %s ", outputPath)
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
 			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())

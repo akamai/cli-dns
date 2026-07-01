@@ -40,10 +40,6 @@ type ZoneSummaryList struct {
 	Zones []*ZoneSummary
 }
 
-type ZoneList struct {
-	Zones []*dns.ZoneResponse
-}
-
 func cmdListZoneconfig(c *cli.Context) error {
 	failStep := func(step, message string, args ...interface{}) error {
 		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
