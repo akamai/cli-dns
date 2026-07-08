@@ -38,13 +38,13 @@ If you want to compile the package from source, you will need Go 1.26.4 or later
 ### Usage
 
 ```
-$  akamai dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
+$ akamai dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
 ```
 
 or 
 
 ```
-$  akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
+$ akamai-dns [--edgerc] [--section] [--accountkey] <command> [sub-command]
 ```
 
 ### Description
@@ -101,7 +101,7 @@ A list of existing zone configurations can be retrieved by using the `akamai dns
 The complete command line is:
 
 ```
-   akamai dns list-zoneconfig  [--json] [--output] [--contractid] [--type] [--search] [--summary] 
+$ akamai dns list-zoneconfig  [--json] [--output] [--contractid] [--type] [--search] [--summary] 
 
 Flags: 
    --json           Output as JSON [$AKAMAI_CLI_DNS_JSON]
@@ -115,7 +115,7 @@ Flags:
 To list Primary zones and generate results in json format, the `--type` and `--json` flags would be used. For example:
 
 ```
-$akamai dns list-zoneconfig --type primary --json
+$ akamai dns list-zoneconfig --type primary --json
 ```
 
 would result in the following output:
@@ -162,7 +162,7 @@ An existing zone configuration can be retrieved by using the `akamai dns retriev
 The complete command line is:
 
 ```
-   akamai dns retrieve-zoneconfig <zonename> [--json] [--output] [--dns]
+$ akamai dns retrieve-zoneconfig <zonename> [--json] [--output] [--dns]
 
 Flags: 
    --json         Output as JSON [$AKAMAI_CLI_DNS_JSON]
@@ -222,7 +222,7 @@ A zone configuration can be created by using the `akamai dns create-zoneconfig` 
 The complete command line is:
 
 ```
-akamai dns create-zoneconfig <zonename> [--json] [--suppress] [--output] [--type] [--master] [--comment] [--signandserve] [--algorithm] [--tsigname] [--tsigalgorithm] [--tsigsecret] [--target] [--endcustomerid] [--file] [--contractid] [--groupid] [--initialize] 
+$ akamai dns create-zoneconfig <zonename> [--json] [--suppress] [--output] [--type] [--master] [--comment] [--signandserve] [--algorithm] [--tsigname] [--tsigalgorithm] [--tsigsecret] [--target] [--endcustomerid] [--file] [--contractid] [--groupid] [--initialize] 
 
 Flags: 
    --json                         Output as JSON [$AKAMAI_CLI_DNS_JSON]
@@ -308,7 +308,7 @@ A zone configuration can be updated by using the `akamai dns update-zoneconfig` 
 The complete command line is:
 
 ```
-akamai dns update-zoneconfig <zonename> [--json] [--suppress] [--output] [--type] [--master] [--comment] [--signandserve] [--algorithm] [--tsigname] [--tsigalgorithm] [--tsigsecret] [--target] [--endcustomerid] [--file] [--contractid] [--dns]
+$ akamai dns update-zoneconfig <zonename> [--json] [--suppress] [--output] [--type] [--master] [--comment] [--signandserve] [--algorithm] [--tsigname] [--tsigalgorithm] [--tsigsecret] [--target] [--endcustomerid] [--file] [--contractid] [--dns]
 
 
 Flags:
