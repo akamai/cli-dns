@@ -30,11 +30,6 @@ import (
 )
 
 func cmdRetrieveZoneconfig(c *cli.Context) error {
-	failStep := func(step, message string, args ...interface{}) error {
-		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
-		return cli.NewExitError(color.RedString(message, args...), 1)
-	}
-
 	//fmt.Fprintf(os.Stderr, "Command %s", c.Command.Name)
 
 	// Initialize context and Edgegrid session

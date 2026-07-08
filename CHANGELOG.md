@@ -4,10 +4,11 @@
 
 ### Features/Enhancements
 
-* Upgrade to Edgegrid v13.2.0
+* Upgrade to Edgegrid v13.3.0
 * Update documentation and --help for recordset commands to enforce mutually exclusive options (filename or recordname+recordtype)
 * Add LastModifiedBy field to Zoneconfig table output
-* Standardize command status/failure messaging ([OK/FAIL]) and table rendering format
+* Standardize command status/failure messaging ([OK/FAIL])
+* Standardize table rendering format for enhanced readability
 * Update project license file
 * Migrate to go 1.26.4
 

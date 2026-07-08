@@ -15,6 +15,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -24,6 +26,12 @@ func intValue(v *int) int {
 		return 0
 	}
 	return *v
+}
+
+// failStep prints a failure message and returns a CLI error
+func failStep(step, message string, args ...interface{}) error {
+	fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
+	return cli.NewExitError(color.RedString(message, args...), 1)
 }
 
 func intPtrEqual(a, b *int) bool {

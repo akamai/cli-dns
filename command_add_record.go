@@ -31,11 +31,6 @@ import (
 )
 
 func cmdAddRecord(c *cli.Context) error {
-	failStep := func(step, message string, args ...interface{}) error {
-		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
-		return cli.NewExitError(color.RedString(message, args...), 1)
-	}
-
 	//Validate postional arguments; record type and zone name
 	if c.NArg() < 2 {
 		return failStep("Preparing recordset", "record type and zonename are required")

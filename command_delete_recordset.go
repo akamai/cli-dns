@@ -26,11 +26,6 @@ import (
 )
 
 func cmdDeleteRecordset(c *cli.Context) error {
-	failStep := func(step, message string, args ...interface{}) error {
-		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
-		return cli.NewExitError(color.RedString(message, args...), 1)
-	}
-
 	// Initialize context and Edgegrid session
 	ctx := context.Background()
 

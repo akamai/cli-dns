@@ -35,11 +35,6 @@ type RecordsetList struct {
 }
 
 func cmdListRecordsets(c *cli.Context) error {
-	failStep := func(step, message string, args ...interface{}) error {
-		fmt.Printf("%s ... %s\n", step, color.RedString("[FAIL]"))
-		return cli.NewExitError(color.RedString(message, args...), 1)
-	}
-
 	// Validate zonename argument
 	if c.NArg() == 0 {
 		return failStep("Preparing recordsets", "zonename required")
