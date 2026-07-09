@@ -10,7 +10,7 @@
 * Standardize command status/failure messaging ([OK/FAIL])
 * Standardize table rendering format for enhanced readability
 * Update project license file
-* Migrate to go 1.26.4
+* Migrate to go 1.26.5
 
 ## Version 0.7.0 (January 2026)
 
