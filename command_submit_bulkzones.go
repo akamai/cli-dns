@@ -25,7 +25,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
@@ -42,13 +42,12 @@ type BulkZonesResponse struct {
 }
 
 func cmdSubmitBulkZones(c *cli.Context) error {
-
 	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing bulk zones request", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -65,14 +64,14 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		maxNumZones    int = 1000
 	)
 
-	fmt.Println("Preparing bulk zones submit request ", "")
+	fmt.Printf("Preparing bulk zones request ... %s\n", color.GreenString("[OK]"))
 	queryArgs := dns.ZoneQueryString{}
 
 	if c.IsSet("contractid") {
 		contractid = c.String("contractid")
 		queryArgs.Contract = contractid
 	} else if c.IsSet("create") {
-		return cli.NewExitError(color.RedString("contractid is required"), 1)
+		return failStep("Preparing bulk zones request", "contractid is required")
 	}
 	if c.IsSet("groupid") {
 		groupid = c.String("groupid")
@@ -91,7 +90,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 
 	// Validate that only one operation is selected (create or delete)
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
-		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
+		return failStep("Preparing bulk zones request", "Either create or delete arg is required")
 	}
 
 	// Creating object based on operation type
@@ -117,7 +116,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		inputPath = c.String("file")
 		inputPath = filepath.FromSlash(inputPath)
 	} else {
-		return cli.NewExitError(color.RedString(" Bulk create JSON source file must be specified"), 1)
+		return failStep("Preparing bulk zones request", "Bulk create JSON source file must be specified")
 	}
 	if c.IsSet("output") {
 		outputPath = c.String("output")
@@ -128,14 +127,14 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 	if ok {
 		batchsize, err := strconv.Atoi(val)
 		if err != nil {
-			return cli.NewExitError(color.RedString(" Environ variable AKAMAI_ZONEBATCH has invalid value"), 1)
+			return failStep("Preparing bulk zones request", "Environ variable AKAMAI_ZONEBATCH has invalid value")
 		}
 		maxNumZones = batchsize
 	}
 
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
-		return cli.NewExitError(color.RedString("Failed to read input file"), 1)
+		return failStep("Preparing bulk zones request", "Failed to read input file")
 	}
 
 	if op == "create" {
@@ -144,17 +143,10 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 		err = json.Unmarshal(data, bulkDeleteList)
 	}
 	if err != nil {
-		return cli.NewExitError(color.RedString("Failed to parse json file content into bulk zones object"), 1)
+		return failStep("Preparing bulk zones request", "Failed to parse json file content into bulk zones object")
 	}
 
-	/*var (
-		submitStatusList []*dns.CreateBulkZonesResponse
-		deleteResp       *dns.DeleteBulkZonesResponse
-	)*/
-
 	submitStatusList := make([]*dns.BulkZonesResponse, 0)
-
-	fmt.Println("Submitting Bulk Zones request  ", "")
 
 	// Handling bulk create in batches
 	if op == "create" {
@@ -192,7 +184,7 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 			}
 			resp, err := dnsClient.CreateBulkZones(ctx, req)
 			if err != nil {
-				return cli.NewExitError(color.RedString("bulk zone submit request failed: %s", err), 1)
+				return failStep("Submitting Bulk Zones request", "bulk zone submit request failed: %s", err)
 			}
 			submitStatusList = append(submitStatusList, &dns.BulkZonesResponse{
 				RequestID:      resp.RequestID,
@@ -206,25 +198,27 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 			BypassSafetyChecks: &bypass,
 		})
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Bulk Zone Request submit failed. Error: %s", err.Error())), 1)
+			return failStep("Submitting Bulk Zones request", "Bulk Zone Request submit failed. Error: %s", err.Error())
 		}
 		submitStatusList = append(submitStatusList, &dns.BulkZonesResponse{
 			RequestID:      resp.RequestID,
 			ExpirationDate: resp.ExpirationDate,
 		})
 	}
+	fmt.Printf("Submitting Bulk Zones request ... %s\n", color.GreenString("[OK]"))
 
 	// Format results in JSON or table format
 	results := ""
 	if c.IsSet("json") && c.Bool("json") {
 		jsonBytes, err := json.MarshalIndent(submitStatusList, "", " ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("unable to marshal"), 1)
+			return failStep("Assembling Bulk Zone Request Status", "unable to marshal")
 		}
 		results = string(jsonBytes)
 	} else {
-		results = renderBulkZonesRequestStatusTable(submitStatusList, c)
+		results = renderBulkZonesRequestStatusTable(submitStatusList)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Bulk Zone Request Status ... %s\n", color.GreenString("[OK]"))
 
 	// Write output either to output file or console
 	if len(outputPath) < 1 {
@@ -233,19 +227,19 @@ func cmdSubmitBulkZones(c *cli.Context) error {
 
 	file, err := os.Create(outputPath)
 	if err != nil {
-		return cli.NewExitError(color.RedString("failed to create output file: %s", err), 1)
+		return failStep("Writing Output", "failed to create output file: %s", err)
 	}
 	defer func() { _ = file.Close() }()
 
 	if _, err := file.WriteString(results); err != nil {
-		return cli.NewExitError(color.RedString("failed to write output"), 1)
+		return failStep("Writing Output", "failed to write output")
 	}
+	fmt.Fprintf(os.Stderr, "Writing Output ... %s\n", color.GreenString("[OK]"))
 
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
 
-	_, _ = fmt.Fprintln(c.App.Writer, "")
 	_, _ = fmt.Fprintln(c.App.Writer, results)
 	_, _ = fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	return nil

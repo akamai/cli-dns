@@ -22,46 +22,41 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdRetrieveZone(c *cli.Context) error {
-
 	// Initialize context and EdgeGrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing zone", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename is required"), 1)
+		return failStep("Preparing zone", "zonename is required")
 	}
 
 	zonename := c.Args().First()
-
-	_, _ = fmt.Fprintln(c.App.Writer, color.BlueString("Fetching zone..."))
+	fmt.Printf("Preparing zone ... %s\n", color.GreenString("[OK]"))
 
 	// Fetch zone details
 	zoneResp, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString("Zone not found "), 1)
+		return failStep("Retrieving Zone", "Zone not found")
 	}
-
-	//fmt.Fprintln(c.App.Writer, fmt.Sprintf(" [%s]", color.GreenString("OK")))
+	fmt.Printf("Retrieving Zone ... %s\n", color.GreenString("[OK]"))
 
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
 		// Print zone details only
-		_, _ = fmt.Fprintln(c.App.Writer, "")
 		renderZoneTable(zoneResp, nil, c)
 		return nil
 	}
@@ -69,7 +64,7 @@ func cmdRetrieveZone(c *cli.Context) error {
 	// Fetch all recordsets for the zone
 	recordsResp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{Zone: zonename})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("failed to retrieve zone: %s", err)), 1)
+		return failStep("Retrieving Zone", "failed to retrieve zone: %s", err)
 	}
 
 	filterSlice := c.StringSlice("filter")
@@ -94,13 +89,12 @@ func cmdRetrieveZone(c *cli.Context) error {
 		}
 		out, err := json.MarshalIndent(jsonObj, "", " ")
 		if err != nil {
-			return cli.NewExitError("failed to marshal JSON output", 1)
+			return failStep("Assembling Zone Content", "failed to marshal JSON output")
 		}
 		_, _ = fmt.Fprintln(c.App.Writer, string(out))
 		return nil
 	}
 
-	_, _ = fmt.Fprintln(c.App.Writer, "")
 	renderZoneTable(zoneResp, filteredRecords, c)
 
 	return nil

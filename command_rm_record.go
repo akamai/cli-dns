@@ -21,28 +21,26 @@ import (
 	"os"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdRmRecord(c *cli.Context) error {
-
 	// Initialize context and EdgeGrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing recordset", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	// Validate record type and zone name arguments
 	if c.NArg() < 2 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("record type and zonename are required"), 1)
+		return failStep("Preparing recordset", "record type and zonename are required")
 	}
 	recordType := strings.ToUpper(c.Args().Get(0))
 	zonename := c.Args().Get(1)
@@ -52,16 +50,16 @@ func cmdRmRecord(c *cli.Context) error {
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+		return failStep("Preparing recordset", "Failed to retrieve zone information for %s. Error: %s", zonename, err)
 	}
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and does not have recordsets", zonename)), 1)
+		return failStep("Preparing recordset", "Zone %s is an ALIAS zone and does not have recordsets", zonename)
 	}
 
 	if !c.IsSet("name") {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("Record name (--name) is required"), 1)
+		return failStep("Preparing recordset", "Record name (--name) is required")
 	}
+	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 	name := c.String("name")
 
 	fqdn := name
@@ -69,15 +67,13 @@ func cmdRmRecord(c *cli.Context) error {
 		fqdn = name + "." + zonename
 	}
 
-	fmt.Println("Looking up records to delete...")
-
 	// Get list of recordsets matching the type and zone
 	listResp, err := dnsClient.GetRecordList(ctx, dns.GetRecordListRequest{
 		Zone:       zonename,
 		RecordType: recordType,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to list records: %s", err)), 1)
+		return failStep("Looking up records to delete", "Failed to list records: %s", err)
 	}
 
 	// Filter matching records by name
@@ -87,25 +83,25 @@ func cmdRmRecord(c *cli.Context) error {
 			matching = append(matching, dns.RecordBody{
 				Name:       rec.Name,
 				RecordType: rec.Type,
-				TTL:        rec.TTL,
+				TTL:        &rec.TTL,
 				Target:     rec.Rdata,
 			})
 		}
 	}
 
 	if len(matching) == 0 {
-		return cli.NewExitError(color.RedString("No matching records found."), 1)
+		return failStep("Looking up records to delete", "No matching records found.")
 	}
 
 	// If multiple records match, ask user unless --force-multiple is set
 	if len(matching) > 1 && !c.Bool("force-multiple") {
 		if c.Bool("non-interactive") {
-			return cli.NewExitError(color.RedString("Multiple records found. Use --force-multiple in non-interactive mode."), 1)
+			return failStep("Looking up records to delete", "Multiple records found. Use --force-multiple in non-interactive mode.")
 		}
-
+		fmt.Printf("Looking up records to delete ... %s\n", color.GreenString("[OK]"))
 		fmt.Printf("Multiple records matched for %s %s:\n", recordType, fqdn)
 		for _, rec := range matching {
-			fmt.Printf("- TTL: %d, RDATA: %v\n", rec.TTL, rec.Target)
+			fmt.Printf("- TTL: %d, RDATA: %v\n", intValue(rec.TTL), rec.Target)
 		}
 		fmt.Print("Are you sure you want to delete all matching records? [y/N]: ")
 		reader := bufio.NewReader(os.Stdin)
@@ -116,7 +112,7 @@ func cmdRmRecord(c *cli.Context) error {
 			return nil
 		}
 	}
-
+	fmt.Printf("Looking up records to delete ... %s\n", color.GreenString("[OK]"))
 	// Delete each matching record
 	for _, rec := range matching {
 		err = dnsClient.DeleteRecord(ctx, dns.DeleteRecordRequest{
@@ -125,10 +121,9 @@ func cmdRmRecord(c *cli.Context) error {
 			RecordType: rec.RecordType,
 		})
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to delete record %s %s: %s", rec.RecordType, rec.Name, err)), 1)
+			return failStep("Deleting Recordset", "Failed to delete record %s %s: %s", rec.RecordType, rec.Name, err)
 		}
-		fmt.Println(color.GreenString(fmt.Sprintf("Deleted record: %s %s", rec.RecordType, rec.Name)))
 	}
-
+	fmt.Printf("Deleting Recordset ... %s\n", color.GreenString("[OK]"))
 	return nil
 }

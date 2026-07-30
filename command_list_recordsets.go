@@ -24,7 +24,7 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
@@ -37,8 +37,7 @@ type RecordsetList struct {
 func cmdListRecordsets(c *cli.Context) error {
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename required"), 1)
+		return failStep("Preparing recordsets", "zonename required")
 	}
 
 	// Initialize context and Edgegrid session
@@ -46,7 +45,7 @@ func cmdListRecordsets(c *cli.Context) error {
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing recordsets", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -58,11 +57,12 @@ func cmdListRecordsets(c *cli.Context) error {
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+		return failStep("Preparing recordsets", "Failed to retrieve zone information for %s. Error: %s", zonename, err)
 	}
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
+		return failStep("Preparing recordsets", "Zone %s is an ALIAS zone and cannot have recordsets", zonename)
 	}
+	fmt.Printf("Preparing recordsets ... %s\n", color.GreenString("[OK]"))
 
 	outputPath := ""
 	if c.IsSet("output") {
@@ -76,7 +76,6 @@ func cmdListRecordsets(c *cli.Context) error {
 		sortby = "type"
 	}
 
-	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving Recordsets List..."))
 	req := dns.GetRecordSetsRequest{
 		Zone: zonename,
 		QueryArgs: &dns.RecordSetQueryArgs{
@@ -85,7 +84,6 @@ func cmdListRecordsets(c *cli.Context) error {
 			SortBy:  sortby,
 		},
 	}
-
 	if len(typeFilter) > 0 {
 		req.QueryArgs.Types = strings.Join(typeFilter, ",")
 	}
@@ -93,40 +91,40 @@ func cmdListRecordsets(c *cli.Context) error {
 	// Fetch recordsets
 	resp, err := dnsClient.GetRecordSets(ctx, req)
 	if err != nil {
-		return cli.NewExitError(color.RedString("Recordset List retrieval failed %s", err), 1)
+		return failStep("Retrieving Recordsets List", "Recordset List retrieval failed %s", err)
 	}
+	fmt.Printf("Retrieving Recordsets List ... %s\n", color.GreenString("[OK]"))
 
 	recordsets := resp.RecordSets
 
 	// Format output (JSON or table)
 	var results string
-
 	if c.Bool("json") {
 		output := RecordsetList{Recordsets: recordsets}
 		b, err := json.MarshalIndent(output, "", " ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to format JSON"), 1)
+			return failStep("Assembling Recordsets List", "Unable to format JSON")
 		}
 		results = string(b)
 	} else {
-		results = renderRecordsetListTable(zonename, recordsets)
+		results = renderRecordsetListTable(recordsets)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Recordsets List ... %s\n", color.GreenString("[OK]"))
 
 	if outputPath != "" {
 		f, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString("Failed to create output file: %s", err), 1)
+			return failStep("Writing Output", "Failed to create output file: %s", err)
 		}
-
 		defer func() { _ = f.Close() }()
 		_, _ = f.WriteString(results)
 		if err := f.Sync(); err != nil {
-			return cli.NewExitError(color.RedString("failed to sync file: %s", err), 1)
+			return failStep("Writing Output", "failed to sync file: %s", err)
 		}
-		fmt.Fprintln(os.Stderr, color.GreenString("Output is written to %s", outputPath))
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
+		return nil
 	}
 
-	_, _ = fmt.Fprintln(c.App.Writer, "")
 	_, _ = fmt.Fprintln(c.App.Writer, results)
 	return nil
 }

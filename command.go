@@ -161,11 +161,11 @@ func GetCommands() []cli.Command {
 		Flags: append(baseV11BaseFlags,
 			cli.StringFlag{
 				Name:  "name",
-				Usage: "Recordset `NAME`",
+				Usage: "Recordset `NAME` (Required)",
 			},
 			cli.StringFlag{
 				Name:  "type",
-				Usage: "Recordset `TYPE`",
+				Usage: "Recordset `TYPE` (Required)",
 			},
 		),
 	})
@@ -175,7 +175,15 @@ func GetCommands() []cli.Command {
 		Description: "Create a new recordset",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdCreateRecordset,
-		Flags: append(baseSetCmdFlags,
+		Flags: append(baseV11CmdFlags,
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "Recordset `NAME` (Required if not using --file)",
+			},
+			cli.StringFlag{
+				Name:  "type",
+				Usage: "Recordset `TYPE` (Required if not using --file)",
+			},
 			cli.IntFlag{
 				Name:  "ttl",
 				Usage: "Recordset `TTL`",
@@ -186,7 +194,7 @@ func GetCommands() []cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "file",
-				Usage: "`FILE` path to JSON formatted recordset content",
+				Usage: "`FILE` path to JSON formatted recordset content (Required if not using --name and --type)",
 			},
 		),
 	})
@@ -196,7 +204,15 @@ func GetCommands() []cli.Command {
 		Description: "Update existing recordset",
 		ArgsUsage:   "<zonename>",
 		Action:      cmdUpdateRecordset,
-		Flags: append(baseSetCmdFlags,
+		Flags: append(baseV11CmdFlags,
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "Recordset `NAME` (Required if not using --file)",
+			},
+			cli.StringFlag{
+				Name:  "type",
+				Usage: "Recordset `TYPE` (Required if not using --file)",
+			},
 			cli.IntFlag{
 				Name:  "ttl",
 				Usage: "Recordset `TTL`",
@@ -207,7 +223,7 @@ func GetCommands() []cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "file",
-				Usage: "`FILE` path to JSON formatted recordset content. Allows multiple recordsets.",
+				Usage: "`FILE` path to JSON formatted recordset content. Allows multiple recordsets (Required if not using --name and --type).",
 			},
 		),
 	})
@@ -220,11 +236,11 @@ func GetCommands() []cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "name",
-				Usage: "Recordset `NAME`",
+				Usage: "Recordset NAME (Required)",
 			},
 			cli.StringFlag{
 				Name:  "type",
-				Usage: "Recordset `TYPE`",
+				Usage: "Recordset TYPE (Required)",
 			},
 		},
 	})

@@ -23,19 +23,18 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdResultBulkZones(c *cli.Context) error {
-
 	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing bulk zones result request", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -48,14 +47,12 @@ func cmdResultBulkZones(c *cli.Context) error {
 
 	requestids = c.StringSlice("requestid")
 	if len(requestids) < 1 {
-		return cli.NewExitError(color.RedString("One or more requestids required. "), 1)
+		return failStep("Preparing bulk zones result request", "One or more requestids required")
 	}
 
-	fmt.Println("Preparing bulk zones result request(s) ", "")
-
-	// Validate create/ delete flags
+	// Validate create/delete flags
 	if (c.IsSet("create") && c.IsSet("delete")) || (!c.IsSet("create") && !c.IsSet("delete")) {
-		return cli.NewExitError(color.RedString("Either create or delete arg is required. "), 1)
+		return failStep("Preparing bulk zones result request", "Either create or delete arg is required")
 	}
 	if c.IsSet("delete") {
 		op = "delete"
@@ -64,29 +61,30 @@ func cmdResultBulkZones(c *cli.Context) error {
 		outputPath = c.String("output")
 		outputPath = filepath.FromSlash(outputPath)
 	}
+	fmt.Printf("Preparing bulk zones result request ... %s\n", color.GreenString("[OK]"))
 
 	var results string
-	fmt.Println("Submitting Bulk Zones request  ", "")
+
 	if op == "create" {
 		resultRespCreateList := make([]*dns.GetBulkZoneCreateResultResponse, 0)
-
 		for _, requestid := range requestids {
 			resp, err := dnsClient.GetBulkZoneCreateResult(ctx, dns.GetBulkZoneCreateResultRequest{
 				RequestID: requestid,
 			})
 			if err != nil {
-				return cli.NewExitError(color.RedString(fmt.Sprintf("bulk zone create error: %s", err)), 1)
+				return failStep("Fetching Bulk Zone Create Results", "bulk zone create error: %s", err)
 			}
 			resultRespCreateList = append(resultRespCreateList, resp)
 		}
+		fmt.Printf("Fetching Bulk Zone Create Results ... %s\n", color.GreenString("[OK]"))
 		if c.IsSet("json") && c.Bool("json") {
 			jsonData, err := json.MarshalIndent(resultRespCreateList, "", " ")
 			if err != nil {
-				return cli.NewExitError(color.RedString("Failed to marshal JSON result"), 1)
+				return failStep("Assembling Bulk Zone Response Content", "Failed to marshal JSON result")
 			}
 			results = string(jsonData)
 		} else {
-			results = renderBulkZonesResultTable(resultRespCreateList, c)
+			results = renderBulkZonesResultTable(resultRespCreateList)
 		}
 	} else {
 		resultRespDeleteList := make([]*dns.GetBulkZoneDeleteResultResponse, 0)
@@ -95,42 +93,40 @@ func cmdResultBulkZones(c *cli.Context) error {
 				RequestID: requestid,
 			})
 			if err != nil {
-				return cli.NewExitError(color.RedString(fmt.Sprintf("bulk zone delete error: %s", err)), 1)
+				return failStep("Fetching Bulk Zone Delete Results", "bulk zone delete error: %s", err)
 			}
 			resultRespDeleteList = append(resultRespDeleteList, resp)
 		}
+		fmt.Printf("Fetching Bulk Zone Delete Results ... %s\n", color.GreenString("[OK]"))
 		if c.IsSet("json") && c.Bool("json") {
 			jsonData, err := json.MarshalIndent(resultRespDeleteList, "", " ")
 			if err != nil {
-				return cli.NewExitError(color.RedString("Failed to marshal JSON result"), 1)
+				return failStep("Assembling Bulk Zone Response Content", "Failed to marshal JSON result")
 			}
 			results = string(jsonData)
 		} else {
-			results = renderBulkZonesResultTable(resultRespDeleteList, c)
+			results = renderBulkZonesResultTable(resultRespDeleteList)
 		}
 	}
 
-	/// Write output to file or print to console
-	fmt.Println("Assembling Bulk Zone Response Content ", "")
+	fmt.Fprintf(os.Stderr, "Assembling Bulk Zone Response Content ... %s\n", color.GreenString("[OK]"))
+
+	// Write output to file or print to console
 	if len(outputPath) > 1 {
-		//fmt.Printf("Writing Output to %s ", outputPath)
 		zfHandle, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())
 		}
 		defer func() { _ = zfHandle.Close() }()
-		_, err = zfHandle.WriteString(string(results))
+		_, err = zfHandle.WriteString(results)
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
+			return failStep("Writing Output", "Unable to write output to file")
 		}
 		_ = zfHandle.Sync()
-		fmt.Println(color.GreenString("Output written to %s", outputPath))
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
-	} else {
-		_, _ = fmt.Fprintln(c.App.Writer, "")
-		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 
+	_, _ = fmt.Fprintln(c.App.Writer, results)
 	return nil
-
 }

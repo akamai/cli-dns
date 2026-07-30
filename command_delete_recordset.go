@@ -19,28 +19,26 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdDeleteRecordset(c *cli.Context) error {
-
 	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing recordset", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename is required"), 1)
+		return failStep("Preparing recordset", "zonename is required")
 	}
 	zonename := c.Args().First()
 
@@ -49,31 +47,30 @@ func cmdDeleteRecordset(c *cli.Context) error {
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+		return failStep("Preparing recordset", "Failed to retrieve zone information for %s. Error: %s", zonename, err)
 	}
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
+		return failStep("Preparing recordset", "Zone %s is an ALIAS zone and cannot have recordsets", zonename)
 	}
 
 	// Validate required flags
 	if !c.IsSet("name") || !c.IsSet("type") {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("Recordset name and type field values are required"), 1)
+		return failStep("Preparing recordset", "Recordset name and type field values are required")
 	}
 	recordType := c.String("type")
 	recordName := c.String("name")
+	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 
 	// Check if recordset exists
-	fmt.Println("Checking Recordset existance  ", "")
-
 	_, err = dnsClient.GetRecord(ctx, dns.GetRecordRequest{
 		Zone:       zonename,
 		Name:       recordName,
 		RecordType: recordType,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failure retrieving recordset. Error: %s", err)), 1)
+		return failStep("Checking Recordset Existence", "Failure retrieving recordset. Error: %s", err)
 	}
+	fmt.Printf("Checking Recordset Existence ... %s\n", color.GreenString("[OK]"))
 
 	// Delete recordset
 	err = dnsClient.DeleteRecord(ctx, dns.DeleteRecordRequest{
@@ -82,9 +79,8 @@ func cmdDeleteRecordset(c *cli.Context) error {
 		RecordType: recordType,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("failed to delete record: %s", err)), 1)
+		return failStep("Deleting Recordset", "failed to delete record: %s", err)
 	}
-
-	fmt.Println(color.GreenString("Record Deleted Successfully"))
+	fmt.Printf("Deleting Recordset ... %s\n", color.GreenString("[OK]"))
 	return nil
 }

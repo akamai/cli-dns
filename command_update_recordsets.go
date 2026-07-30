@@ -23,20 +23,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdUpdateRecordsets(c *cli.Context) error {
-
 	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing recordsets", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -49,8 +48,7 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename is required"), 1)
+		return failStep("Preparing recordsets", "zonename is required")
 	}
 
 	zonename = c.Args().First()
@@ -60,10 +58,10 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+		return failStep("Preparing recordsets", "Failed to retrieve zone information for %s. Error: %s", zonename, err)
 	}
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and does not have recordsets", zonename)), 1)
+		return failStep("Preparing recordsets", "Zone %s is an ALIAS zone and does not have recordsets", zonename)
 	}
 
 	if c.IsSet("output") {
@@ -74,18 +72,18 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		inputPath = c.String("file")
 		inputPath = filepath.FromSlash(inputPath)
 	} else {
-		return cli.NewExitError(color.RedString("Input file is required"), 1)
+		return failStep("Preparing recordsets", "Input file is required")
 	}
 
 	// Parse input JSON file
 	data, err := os.ReadFile(filepath.FromSlash(inputPath))
 	if err != nil {
-		return cli.NewExitError(color.RedString("Failed to read input file"), 1)
+		return failStep("Preparing recordsets", "Failed to read input file")
 	}
 	recordsets := &dns.RecordSets{}
 	err = json.Unmarshal(data, recordsets)
 	if err != nil {
-		return cli.NewExitError(color.RedString("Failed to parse json file content"), 1)
+		return failStep("Preparing recordsets", "Failed to parse json file content")
 	}
 
 	// Determine update mode (overwrite or update existing recordset)
@@ -95,11 +93,12 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		recordsets := &dns.RecordSets{}
 		err = json.Unmarshal(data, recordsets)
 		if err != nil {
-			return cli.NewExitError(color.RedString("Failed to parse json file content"), 1)
+			return failStep("Preparing recordsets", "Failed to parse json file content")
 		}
 		recordsetWorkList = recordsets.RecordSets
+		fmt.Printf("Preparing recordsets ... %s\n", color.GreenString("[OK]"))
 	} else {
-		fmt.Println("Retrieving Existing Recordsets ", "")
+
 		resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 			Zone: zonename,
 			QueryArgs: &dns.RecordSetQueryArgs{
@@ -107,10 +106,9 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 			},
 		})
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
+			return failStep("Retrieving Existing Recordsets", "Recordset List retrieval failed. Error: %s", err.Error())
 		}
-
-		fmt.Println("Processing Updated Recordsets ", "")
+		fmt.Fprintf(os.Stderr, "Retrieving Existing Recordsets ... %s\n", color.GreenString("[OK]"))
 		recordsetWorkList = resp.RecordSets
 
 		// Merge changes from input file
@@ -137,10 +135,11 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 			soavals[2] = strconv.Itoa(v + 1)
 			recordsetWorkList[soaIndex].Rdata[0] = strings.Join(soavals, " ")
 		}
+		fmt.Fprintf(os.Stderr, "Processing Updated Recordsets ... %s\n", color.GreenString("[OK]"))
 	}
 
 	// Submit recordset updates
-	fmt.Println("Updating Recordsets ", "")
+
 	recordsets.RecordSets = recordsetWorkList
 	err = dnsClient.UpdateRecordSets(ctx, dns.UpdateRecordSetsRequest{
 		Zone:       zonename,
@@ -148,52 +147,51 @@ func cmdUpdateRecordsets(c *cli.Context) error {
 		RecLock:    []bool{true},
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset update failed. Error: %s", err.Error())), 1)
+		return failStep("Updating Recordsets", "Recordset update failed. Error: %s", err.Error())
 	}
 
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
-
+	fmt.Printf("Updating Recordsets ... %s\n", color.GreenString("[OK]"))
 	// Fetch full updated list
-	fmt.Fprintln(os.Stderr, color.BlueString("Retrieving full recordsets list...\n"))
+
 	resp, err := dnsClient.GetRecordSets(ctx, dns.GetRecordSetsRequest{
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset List retrieval failed. Error: %s", err.Error())), 1)
+		return failStep("Retrieving Recordsets List", "Recordset List retrieval failed. Error: %s", err.Error())
 	}
-
+	fmt.Fprintf(os.Stderr, "Retrieving Recordsets List ... %s\n", color.GreenString("[OK]"))
 	results := ""
 
 	// Format output as JSON or table format
 	if c.IsSet("json") && c.Bool("json") {
 		rjson, err := json.MarshalIndent(resp, "", "  ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to display recordsets list"), 1)
+			return failStep("Assembling Recordsets List", "Unable to display recordsets list")
 		}
 		results = string(rjson)
 	} else {
-		results = renderRecordsetListTable(zonename, resp.RecordSets)
+		results = renderRecordsetListTable(resp.RecordSets)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Recordsets List ... %s\n", color.GreenString("[OK]"))
 
 	// Write output to file or console
 	if len(outputPath) > 1 {
-		//fmt.Printf("Writing Output to %s ", outputPath)
 		rlfHandle, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())
 		}
 		defer func() { _ = rlfHandle.Close() }()
 		_, err = rlfHandle.WriteString(string(results))
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to write zone list output to file"), 1)
+			return failStep("Writing Output", "Unable to write zone list output to file")
 		}
 		_ = rlfHandle.Sync()
 		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
 	} else {
-		_, _ = fmt.Fprintln(c.App.Writer, "")
 		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 

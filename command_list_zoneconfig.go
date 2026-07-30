@@ -25,7 +25,7 @@ import (
 	"github.com/akamai/cli-dns/edgegrid"
 	"github.com/fatih/color"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/urfave/cli"
 )
 
@@ -40,18 +40,13 @@ type ZoneSummaryList struct {
 	Zones []*ZoneSummary
 }
 
-type ZoneList struct {
-	Zones []*dns.ZoneResponse
-}
-
 func cmdListZoneconfig(c *cli.Context) error {
-
 	// Initialize context and Edgegrid session
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing zone list", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -77,10 +72,11 @@ func cmdListZoneconfig(c *cli.Context) error {
 	// Fetch zones from DNS client
 	resp, err := dnsClient.ListZones(ctx, query)
 	if err != nil {
-		return fmt.Errorf("zone list retrieval failed: %v", err)
+		return failStep("Preparing zone list", "zone list retrieval failed: %v", err)
 	}
 	zones := resp.Zones
 	var output string
+	fmt.Printf("Preparing zone list ... %s\n", color.GreenString("[OK]"))
 
 	// Format output in summary or table, optionally as JSON
 	if c.Bool("summary") {
@@ -96,7 +92,7 @@ func cmdListZoneconfig(c *cli.Context) error {
 			}
 			b, err := json.MarshalIndent(summaryList, "", " ")
 			if err != nil {
-				return fmt.Errorf("failed to marshal summary JSON: %v", err)
+				return failStep("Assembling Zone List", "failed to marshal summary JSON: %v", err)
 			}
 			output = string(b)
 		} else {
@@ -106,7 +102,7 @@ func cmdListZoneconfig(c *cli.Context) error {
 		if c.Bool("json") {
 			b, err := json.MarshalIndent(zones, "", " ")
 			if err != nil {
-				return fmt.Errorf("failed to marshal full JSON: %v", err)
+				return failStep("Assembling Zone List", "failed to marshal full JSON: %v", err)
 			}
 			output = string(b)
 		} else {
@@ -118,8 +114,9 @@ func cmdListZoneconfig(c *cli.Context) error {
 	if outFile := c.String("output"); outFile != "" {
 		path := filepath.FromSlash(outFile)
 		if err := os.WriteFile(path, []byte(output), 0644); err != nil {
-			return fmt.Errorf("failed to write to output file %v", err)
+			return failStep("Writing Output", "failed to write to output file %v", err)
 		}
+		fmt.Printf("Writing Output ... %s\n", color.GreenString("[OK]"))
 		_, _ = fmt.Fprintln(c.App.Writer, color.GreenString("Output written to %s", path))
 	} else {
 		_, _ = fmt.Fprintln(c.App.Writer, output)
