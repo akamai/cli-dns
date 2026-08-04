@@ -24,24 +24,23 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdCreateRecordset(c *cli.Context) error {
-	//Validate zone name argument
+	// Validate zone name argument
 	if c.NArg() == 0 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename is required"), 1)
+		return failStep("Preparing recordset", "zonename is required")
 	}
 
-	//Initialize Edgegrid session and DNS client
+	// Initialize Edgegrid session and DNS client
 	ctx := context.Background()
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing recordset", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -50,8 +49,6 @@ func cmdCreateRecordset(c *cli.Context) error {
 		zonename   string
 		outputPath string
 		inputPath  string
-		// json
-		// suppress
 	)
 
 	zonename = c.Args().First()
@@ -60,10 +57,10 @@ func cmdCreateRecordset(c *cli.Context) error {
 		Zone: zonename,
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to retrieve zone information for %s. Error: %s", zonename, err)), 1)
+		return failStep("Preparing recordset", "Failed to retrieve zone information for %s. Error: %s", zonename, err)
 	}
 	if strings.EqualFold(zoneResp.Type, "ALIAS") {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Zone %s is an ALIAS zone and cannot have recordsets", zonename)), 1)
+		return failStep("Preparing recordset", "Zone %s is an ALIAS zone and cannot have recordsets", zonename)
 	}
 
 	// Get input and output file paths if set
@@ -75,40 +72,37 @@ func cmdCreateRecordset(c *cli.Context) error {
 		outputPath = c.String("output")
 		outputPath = filepath.FromSlash(outputPath)
 	}
-	fmt.Println("Preparing recordset ", "")
 
 	newrecord := &dns.RecordBody{}
 
-	//Load recordset from JSOn file if provided
+	// Load recordset from JSON file if provided
 	if c.IsSet("file") {
 		data, err := os.ReadFile(filepath.FromSlash(inputPath))
 		if err != nil {
-			return cli.NewExitError(color.RedString("Failed to read input file"), 1)
+			return failStep("Preparing recordset", "Failed to read input file")
 		}
 		recordset := &dns.RecordSet{}
 		err = json.Unmarshal(data, recordset)
 		if err != nil {
-			return cli.NewExitError(color.RedString("Failed to parse json file content into recordset"), 1)
+			return failStep("Preparing recordset", "Failed to parse json file content into recordset")
 		}
 		newrecord.Name = recordset.Name
 		newrecord.RecordType = recordset.Type
-		newrecord.TTL = recordset.TTL
+		newrecord.TTL = &recordset.TTL
 		newrecord.Target = recordset.Rdata
-
-		// Construct recordset from CLI flags
 	} else if c.IsSet("type") {
 		if !c.IsSet("name") || !c.IsSet("ttl") || !c.IsSet("rdata") {
-			_ = cli.ShowCommandHelp(c, c.Command.Name)
-			return cli.NewExitError(color.RedString("Field flags missing for recordset creation"), 1)
+			return failStep("Preparing recordset", "Field flags missing for recordset creation")
 		}
 		newrecord.RecordType = strings.ToUpper(c.String("type"))
 		newrecord.Name = c.String("name")
-		newrecord.TTL = c.Int("ttl")
+		ttlValue := c.Int("ttl")  // 1. Save to a named variable first
+		newrecord.TTL = &ttlValue // 2. Now you can safely take the address
 		newrecord.Target = c.StringSlice("rdata")
 	} else {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("Recordset field values or input file are required"), 1)
+		return failStep("Preparing recordset", "Recordset field values or input file are required")
 	}
+	fmt.Printf("Preparing recordset ... %s\n", color.GreenString("[OK]"))
 
 	// Check if record already exists
 	existing, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{
@@ -117,33 +111,29 @@ func cmdCreateRecordset(c *cli.Context) error {
 		Name:       newrecord.Name,
 	})
 	if err == nil && existing.RecordType != "" {
-		return cli.NewExitError(color.RedString("Recordset already exists"), 1)
-	} /*else {
-		if !dns.ConfigDNSError() || !err.(dns.ConfigDNSError).NotFound() {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failure while checking recordset existance. Error: %s", err.Error())), 1)
-		}
-	}*/
+		return failStep("Checking Recordset Existence", "Recordset already exists")
+	}
+	fmt.Printf("Checking Recordset Existence ... %s\n", color.GreenString("[OK]"))
 
 	// Create new recordset
-	fmt.Println("Creating Recordset  ", "")
 	err = dnsClient.CreateRecord(ctx, dns.CreateRecordRequest{Zone: zonename, Record: newrecord})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Recordset create failed. Error: %s", err)), 1)
+		return failStep("Creating Recordset", "Recordset create failed. Error: %s", err)
 	}
+	fmt.Printf("Creating Recordset ... %s\n", color.GreenString("[OK]"))
 
 	// Retrieve recordset after creation
-	fmt.Println("Verifying Recordset  ", "")
 	record, err := dnsClient.GetRecord(ctx, dns.GetRecordRequest{Zone: zonename, RecordType: newrecord.RecordType, Name: newrecord.Name})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to read recordset content. Error: %s", err.Error())), 1)
+		return failStep("Verifying Recordset", "Failed to read recordset content. Error: %s", err.Error())
 	}
+	fmt.Printf("Verifying Recordset ... %s\n", color.GreenString("[OK]"))
 
 	if c.IsSet("suppress") && c.Bool("suppress") {
 		return nil
 	}
-	results := ""
-	fmt.Println(color.BlueString("Assembling recordset Content... ", ""))
 
+	results := ""
 	// Format output as JSON or table
 	if c.IsSet("json") && c.Bool("json") {
 		recordset := &dns.RecordSet{}
@@ -153,32 +143,30 @@ func cmdCreateRecordset(c *cli.Context) error {
 		recordset.Rdata = record.Target
 		zjson, err := json.MarshalIndent(recordset, "", "  ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to marshal recordset"), 1)
+			return failStep("Assembling Recordset Content", "Unable to marshal recordset")
 		}
 		results = string(zjson)
 	} else {
 		results = renderRecordsetTable(zonename, record)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Recordset Content ... %s\n", color.GreenString("[OK]"))
 
 	// Write to file if output path is specified
 	if len(outputPath) > 1 {
-		//fmt.Println(color.GreenString("Writing Output to %s", outputPath))
 		rsHandle, err := os.Create(outputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("Failed to create output file. Error: %s", err.Error())), 1)
+			return failStep("Writing Output", "Failed to create output file. Error: %s", err.Error())
 		}
 		defer func() { _ = rsHandle.Close() }()
 		_, err = rsHandle.WriteString(string(results))
 		if err != nil {
-			return cli.NewExitError(color.RedString("Unable to write zone output to file"), 1)
+			return failStep("Writing Output", "Unable to write output to file")
 		}
 		_ = rsHandle.Sync()
-		fmt.Println(color.GreenString("Output written to %s", outputPath))
+		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 		return nil
-	} else {
-		_, _ = fmt.Fprintln(c.App.Writer, "")
-		_, _ = fmt.Fprintln(c.App.Writer, results)
 	}
 
+	_, _ = fmt.Fprintln(c.App.Writer, results)
 	return nil
 }

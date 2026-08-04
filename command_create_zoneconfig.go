@@ -25,17 +25,15 @@ import (
 
 	"github.com/akamai/cli-dns/edgegrid"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v13/pkg/dns"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 )
 
 func cmdCreateZoneconfig(c *cli.Context) error {
-
 	// Validate zonename argument
 	if c.NArg() == 0 {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zonename is required"), 1)
+		return failStep("Preparing zone", "zonename is required")
 	}
 
 	// Initialize context and Edgegrid session
@@ -44,7 +42,7 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 
 	sess, err := edgegrid.InitializeSession(c)
 	if err != nil {
-		return fmt.Errorf("session failed %v", err)
+		return failStep("Preparing zone", "session failed %v", err)
 	}
 	ctx = edgegrid.WithSession(ctx, sess)
 	dnsClient := dns.Client(edgegrid.GetSession(ctx))
@@ -58,17 +56,17 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 	)
 
 	newZone := &dns.ZoneCreate{}
+	fmt.Printf("Preparing zone ... %s\n", color.GreenString("[OK]"))
 
 	// Load zone config from file if specified
 	if inputPath != "" {
 		data, err := os.ReadFile(inputPath)
 		if err != nil {
-			return cli.NewExitError(color.RedString("failed to read input file"), 1)
+			return failStep("Preparing zone", "failed to read input file")
 		}
 		if err := json.Unmarshal(data, newZone); err != nil {
-			return cli.NewExitError(color.RedString("failed to parse JSON config"), 1)
+			return failStep("Preparing zone", "failed to parse JSON config")
 		}
-		//fmt.Printf("Debug: ContractID from JSON: '%s'\n", newZone.ContractID)
 
 		zonename = newZone.Zone
 
@@ -102,29 +100,28 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 			contractID = newZone.ContractID
 		}
 	} else {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString("zone command line values or input file are required"), 1)
+		return failStep("Preparing zone", "zone command line values or input file are required")
 	}
 
 	if contractID == "" {
-		return cli.NewExitError(color.RedString("contractid is required"), 1)
+		return failStep("Preparing zone", "contractid is required")
 	}
 
 	err = dns.ValidateZone(newZone)
 	if err != nil {
-		_ = cli.ShowCommandHelp(c, c.Command.Name)
-		return cli.NewExitError(color.RedString(fmt.Sprintf("Invalid zone value: %s", err)), 1)
+		return failStep("Preparing zone", "Invalid zone value: %s", err)
 	}
 
 	// Check if zone already exists
 	_, err = dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err == nil {
-		return cli.NewExitError(color.RedString("zone already exists"), 1)
+		return failStep("Checking Zone Existence", "zone already exists")
 	} else {
 		if errors.Is(err, dns.ErrGetZone) {
-			return cli.NewExitError(color.RedString("failure while checking zone existance"), 1)
+			return failStep("Checking Zone Existence", "failure while checking zone existance")
 		}
 	}
+	fmt.Printf("Checking Zone Existence ... %s\n", color.GreenString("[OK]"))
 
 	// Create new zone
 	err = dnsClient.CreateZone(ctx, dns.CreateZoneRequest{
@@ -132,26 +129,28 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 		ZoneQueryString: dns.ZoneQueryString{Contract: contractID, Group: groupID},
 	})
 	if err != nil {
-		return cli.NewExitError(color.RedString("zone create failed: %s", err), 1)
+		return failStep("Creating Zone", "zone create failed: %s", err)
 	}
+	fmt.Printf("Creating Zone ... %s\n", color.GreenString("[OK]"))
 
 	// Optionally initialize zone with default records
 	if c.Bool("initialize") && strings.ToUpper(newZone.Type) == "PRIMARY" {
 		err = dnsClient.SaveChangeList(ctx, dns.SaveChangeListRequest{Zone: zonename})
 		if err != nil {
-			return cli.NewExitError(color.RedString("failed to initialize zone records"), 1)
+			return failStep("Creating Zone", "failed to initialize zone records")
 		}
 		err = dnsClient.SubmitChangeList(ctx, dns.SubmitChangeListRequest{Zone: zonename})
 		if err != nil {
-			return cli.NewExitError(color.RedString("failed to initialize zone records during submit changelist "), 1)
+			return failStep("Creating Zone", "failed to initialize zone records during submit changelist")
 		}
 	}
 
 	// Fetch zone after creation
 	zone, err := dnsClient.GetZone(ctx, dns.GetZoneRequest{Zone: zonename})
 	if err != nil {
-		return cli.NewExitError(color.RedString(fmt.Sprintf("failed to read zone config: %v", err)), 1)
+		return failStep("Verifying Zone", "failed to read zone config: %v", err)
 	}
+	fmt.Printf("Verifying Zone ... %s\n", color.GreenString("[OK]"))
 
 	if c.Bool("suppress") {
 		return nil
@@ -162,27 +161,27 @@ func cmdCreateZoneconfig(c *cli.Context) error {
 	if c.Bool("json") {
 		b, err := json.MarshalIndent(zone.Zone, "", " ")
 		if err != nil {
-			return cli.NewExitError(color.RedString("failed to marshal zone output"), 1)
+			return failStep("Assembling Zone Content", "failed to marshal zone output")
 		}
 		result = string(b)
 	} else {
-		result = renderZoneconfigTable(zone, c)
+		result = renderZoneconfigTable(zone)
 	}
+	fmt.Fprintf(os.Stderr, "Assembling Zone Content ... %s\n", color.GreenString("[OK]"))
 
 	// Output to file or stdout
 	if outputPath != "" {
 		f, err := os.Create(filepath.FromSlash(outputPath))
 		if err != nil {
-			return cli.NewExitError(color.RedString(fmt.Sprintf("failed to write output file: %v", err)), 1)
+			return failStep("Writing Output", "failed to write output file: %v", err)
 		}
 		defer func() { _ = f.Close() }()
 		_, _ = f.WriteString(result)
 		if err := f.Sync(); err != nil {
-			return cli.NewExitError(color.RedString("failed to sync file: %s", err), 1)
+			return failStep("Writing Output", "failed to sync file: %s", err)
 		}
 		fmt.Fprintln(os.Stderr, color.GreenString("Output written to %s", outputPath))
 	} else {
-		_, _ = fmt.Fprintln(c.App.Writer, "")
 		_, _ = fmt.Fprintln(c.App.Writer, result)
 	}
 
